@@ -1,4 +1,4 @@
-# data_synthesis — LinguaMaster code-switching synthesis
+# code_switch — LinguaMaster code-switching synthesis
 
 A closed-loop, multi-agent pipeline that **generates, scores, and refines
 code-switched (CS) text** for Hanning Labs' HL-Code corpus. This is the
@@ -38,8 +38,8 @@ Input Parameters + Linguistic Principles + Tool context
 ## Usage (once agents are implemented)
 
 ```python
-from code_switch.data_synthesis import build_default_pipeline, SynthesisRequest
-from code_switch.data_synthesis.llm import ClaudeClient
+from code_switch import build_default_pipeline, SynthesisRequest
+from code_switch.llm import ClaudeClient
 
 pipeline = build_default_pipeline(ClaudeClient(), my_store, tools=[...])
 sample = await pipeline.run(request)  # CSSample if accepted, else None

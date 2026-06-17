@@ -15,19 +15,18 @@ dependencies = [
 claude = ["anthropic>=0.40"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
-# This directory IS the `code_switch.data_synthesis` package. `code_switch` is
-# an implicit (PEP 420) namespace package, so it needs no __init__.py.
+# This directory IS the `code_switch` package.
 [tool.setuptools]
 packages = [
-    "code_switch.data_synthesis",
-    "code_switch.data_synthesis.llm",
-    "code_switch.data_synthesis.agents",
-    "code_switch.data_synthesis.tools",
-    "code_switch.data_synthesis.storage",
+    "code_switch",
+    "code_switch.llm",
+    "code_switch.agents",
+    "code_switch.tools",
+    "code_switch.storage",
 ]
 
 [tool.setuptools.package-dir]
-"code_switch.data_synthesis" = "."
+"code_switch" = "."
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

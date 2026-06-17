@@ -1,6 +1,6 @@
 """Persistence interface for accepted samples.
 
-The :class:`~code_switch.data_synthesis.agents.acceptance.AcceptanceAgent`
+The :class:`~code_switch.agents.acceptance.AcceptanceAgent`
 (the pipeline Sink) writes here. Concrete stores (filesystem, DB, the planned
 audio corpus DB) implement this protocol in a later pass.
 """

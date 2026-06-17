@@ -2,7 +2,7 @@
 
 Agents code against the :class:`LLMClient` protocol rather than any concrete
 SDK, so the backend (Claude, others) stays swappable. The reference backend is
-:class:`~code_switch.data_synthesis.llm.claude.ClaudeClient`.
+:class:`~code_switch.llm.claude.ClaudeClient`.
 """
 
 from __future__ import annotations
