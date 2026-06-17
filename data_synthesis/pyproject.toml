@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-switch-data-synthesis"
+version = "0.1.0"
+description = "LinguaMaster code-switching data synthesis framework (skeleton)."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+claude = ["anthropic>=0.40"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+# This directory IS the `code_switch.data_synthesis` package. `code_switch` is
+# an implicit (PEP 420) namespace package, so it needs no __init__.py.
+[tool.setuptools]
+packages = [
+    "code_switch.data_synthesis",
+    "code_switch.data_synthesis.llm",
+    "code_switch.data_synthesis.agents",
+    "code_switch.data_synthesis.tools",
+    "code_switch.data_synthesis.storage",
+]
+
+[tool.setuptools.package-dir]
+"code_switch.data_synthesis" = "."
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
