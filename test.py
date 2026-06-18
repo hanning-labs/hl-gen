@@ -1,7 +1,7 @@
 """Manual verification for the current step. Run:  python test.py
 
-P0.6 — FileSampleStore (no model needed): save an accepted sample to JSONL and
-read it back.
+P0.7 — AcceptanceAgent.accept (no model needed): accept a sample, confirm the
+flattened spec + scores land in metadata and the record is persisted via the store.
 """
 
 import asyncio
@@ -13,8 +13,9 @@ from code_switch import (
     CodeSwitchType,
     SynthesisRequest,
 )
+from code_switch.agents.acceptance import AcceptanceAgent
 from code_switch.models import AgentScore, CSSample, ScoreReport
-from code_switch.storage import FileSampleStore, SampleStore
+from code_switch.storage import FileSampleStore
 
 REQUEST = SynthesisRequest(
     code_switching=CodeSwitchingSpec(
@@ -34,21 +35,30 @@ REQUEST = SynthesisRequest(
 
 async def main() -> None:
     store = FileSampleStore("out/samples.jsonl")
-    print("is SampleStore:", isinstance(store, SampleStore))
+    acceptor = AcceptanceAgent(llm=None, store=store)  # accept() never touches the llm
 
-    sample = CSSample(text="我哋去咗 cinema 睇戲。", request=REQUEST)
+    sample = CSSample(text="我哋去咗 cinema 睇咗 a great movie。", request=REQUEST)
     report = ScoreReport(
-        scores=[AgentScore(agent="FluencyAgent", score=9.0, rationale="clean")],
-        final_score=9.0,
+        scores=[
+            AgentScore(agent="FluencyAgent", score=9.0, rationale="grammatical"),
+            AgentScore(agent="CSRatioAgent", score=8.0, rationale="66% : 34%"),
+        ],
+        final_score=8.5,
         passed=True,
     )
 
-    sample_id = await store.save(sample, report)
-    print("saved id:", sample_id)
+    await acceptor.accept(sample, report)
 
-    records = store.read_all()
-    print("record count:", len(records))
-    print("last record:", records[-1])
+    print("=== metadata after accept ===")
+    for key in ("accepted_by", "final_score", "passed", "scores", "spec"):
+        print(f"{key}: {sample.metadata.get(key)}")
+
+    print("\n=== persisted record ===")
+    record = store.read_all()[-1]
+    print("id:", record["id"])
+    print("saved_at:", record["saved_at"])
+    print("stored metadata.spec:", record["sample"]["metadata"]["spec"])
+    print("stored report.passed:", record["report"]["passed"])
 
 
 if __name__ == "__main__":
