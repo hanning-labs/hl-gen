@@ -32,15 +32,18 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
   `ClaudeClient` stays a stub. Tested live by the user against Qwen2.5-7B-Instruct.
 - [~] **P0.2 — Prompt-build + JSON-parse helper** (`prompting.py`) — render request/principles/
   tool_context/feedback into prompts; robustly extract+validate JSON (no native schema mode).
-- [~] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`).
-- [ ] **P0.4 — Four scorer agents** (`agents/scorers.py`) — Fluency / Naturalness / CSRatio /
+- [x] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`). Prompts via `prompting.py`;
+  parses `{text, translation}`; attaches `request` + `metadata={generator, refined}`.
+- [~] **P0.4 — Four scorer agents** (`agents/scorers.py`) — Fluency / Naturalness / CSRatio /
   SocialCulture; shared scoring helper + per-dimension rubrics returning `{score, rationale}`.
 - [ ] **P0.5 — `SummarizeAgent.summarize`** (`agents/summarize.py`) — deterministic weighted mean
   + `passed` threshold; no model call.
 - [ ] **P0.6 — Reference `SampleStore`** (`storage/file_store.py`) — JSONL/file store implementing
   the protocol; export from `storage/__init__.py`. No model.
 - [ ] **P0.7 — `AcceptanceAgent.accept`** (`agents/acceptance.py`) — attach scores+provenance,
-  persist via store.
+  persist via store. Also fold a **flattened snapshot** of the request's character + basic
+  settings + code-switching spec into `metadata` (the internal request has no downstream
+  visibility once generated, so denormalize it onto the accepted sample here).
 
 ## Priority 1 — Close the refinement loop and make it usable
 
