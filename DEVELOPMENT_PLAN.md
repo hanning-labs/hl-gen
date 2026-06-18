@@ -35,7 +35,9 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
 - [x] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`). Prompts via `prompting.py`;
   parses `{text, translation}`; attaches `request` + `metadata={generator, refined}`.
 - [~] **P0.4 — Four scorer agents** (`agents/scorers.py`) — Fluency / Naturalness / CSRatio /
-  SocialCulture; shared scoring helper + per-dimension rubrics returning `{score, rationale}`.
+  SocialCulture. Prompts adapted from SwitchLingua (`core/prompt.py`): each agent's own role
+  prompt + JSON schema; shared `_DimensionScorer` maps the dimension's score field →
+  `AgentScore.score`, summary/diagnostics → rationale.
 - [ ] **P0.5 — `SummarizeAgent.summarize`** (`agents/summarize.py`) — deterministic weighted mean
   + `passed` threshold; no model call.
 - [ ] **P0.6 — Reference `SampleStore`** (`storage/file_store.py`) — JSONL/file store implementing

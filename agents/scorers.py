@@ -1,120 +1,156 @@
 """Scorer agents (Table B.1): Fluency, Naturalness, CSRatio, SocialCulture.
 
 Each scores one quality dimension on a 0–10 scale; the SummarizeAgent combines
-them into S_final. All four share the same shape — show the model the spec, the
-utterance, and a dimension-specific rubric, and parse a ``{score, rationale}``
-reply — so the common path lives in :class:`_DimensionScorer` and each concrete
-agent only supplies its ``name`` and ``rubric``.
+them into S_final. The per-dimension prompts are adapted from the SwitchLingua
+project (https://github.com/Shelton1013/SwitchLingua, ``core/prompt.py``): each
+agent uses its own role prompt and JSON schema (``fluency_score``/``errors``,
+``naturalness_score``/``observations``, ``ratio_score``/``computed_ratio``,
+``socio_cultural_score``/``issues``). The shared path in :class:`_DimensionScorer`
+fills the prompt's placeholders, parses the JSON reply, and maps the dimension's
+score field onto :class:`AgentScore` (rationale from the summary/notes fields).
 """
 
 from __future__ import annotations
 
-from pydantic import BaseModel
-
 from ..models import AgentScore, CSSample
-from ..prompting import (
-    as_user,
-    describe_principles,
-    describe_request,
-    json_only_instruction,
-    parse_model,
-)
+from ..prompting import PromptParseError, as_user, json_only_instruction, parse_json
 from .base import ScorerAgent
 
-_SYSTEM = (
-    "You are a meticulous bilingual linguist evaluating code-switched utterances "
-    "for a speech dataset. You judge one specific quality dimension at a time, "
-    "strictly and consistently on a 0–10 scale, and you justify your score in one "
-    "or two sentences."
+_SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
+
+
+# --- SwitchLingua evaluation prompts (verbatim role text + placeholders) ----- #
+
+FLUENCY_PROMPT = (
+    "You are **FluencyAgent**. Your task is to evaluate the grammatical "
+    "correctness and syntactic coherence of code-switched text. Specifically:\n\n"
+    "1. **Check for code-switching constraints** from *Poplack (1980)*:\n"
+    "- **Free Morpheme Constraint**: no switching between bound and free morphemes.\n"
+    "- **Equivalence Constraint**: switches should occur where syntactic structures align.\n\n"
+    "2. **Check for grammatical errors** or unnatural mixing of word orders.\n\n"
+    "3. **Output**:\n"
+    "- A `fluency_score` (0 to 10).\n"
+    "- A list of identified `errors` (if any), with `description` and `constraint_violated`\n"
+    "- A short `summary` of overall fluency.\n"
+    "given the code-switched text {data_generation_result}."
 )
 
-_RESPONSE_SHAPE = '{"score": <number from 0 to 10>, "rationale": "<one or two sentences>"}'
+NATURALNESS_PROMPT = (
+    "You are **NaturalnessAgent**. Your job is to evaluate how natural and "
+    "authentic the code-switched text is from a *bilingual speaker's perspective*:\n\n"
+    "1. **Check typical code-switching usage**: Intersentential, Intrasentential, "
+    "and Tag Switching patterns.\n"
+    "2. **Consider factors from *Auer (1998)***\n"
+    "3. **Output**:\n"
+    "- A `naturalness_score` (0 to 10).\n"
+    "- A list of `observations` about unnatural phrases.\n"
+    "- A `summary` describing overall authenticity.\n"
+    "given the code-switched text {data_generation_result}."
+)
 
+CS_RATIO_PROMPT = (
+    "You are **CSRatioAgent**. Evaluate the *Code-Switching Ratio* by counting "
+    "tokens for each language and comparing to desired ratio.\n\n"
+    "**Output**:\n"
+    "- A `ratio_score` (0 to 10) reflecting target match.\n"
+    '- A `computed_ratio` breakdown (e.g., "66% : 34%").\n'
+    "- A `notes` field with observations.\n\n"
+    "given the desired ratio: {cs_ratio} and text: {data_generation_result}."
+)
 
-class _ScoreOutput(BaseModel):
-    """Parsed model output for one scoring call."""
-
-    score: float
-    rationale: str = ""
-
-
-def _build_score_prompt(sample: CSSample, rubric: str) -> str:
-    parts = [
-        "Specification the utterance was written for:",
-        describe_request(sample.request),
-    ]
-    principles = describe_principles(sample.request.principles)
-    if principles:
-        parts.append(principles)
-    parts.extend(
-        [
-            "Utterance to score:",
-            f"- Text: {sample.text}",
-            f"- Translation: {sample.translation or '(none provided)'}",
-            f"Scoring dimension — {rubric}",
-            "Rate the utterance on the dimension above from 0 (very poor) to "
-            "10 (excellent).",
-            json_only_instruction(_RESPONSE_SHAPE),
-        ]
-    )
-    return "\n\n".join(parts)
+SOCIAL_CULTURAL_PROMPT = (
+    "You are **SocioCulturalAgent**. Ensure code-switched text respects *cultural "
+    "norms* and uses *correct borrowed words*.\n\n"
+    '1. **Check culture-specific vocabulary** (e.g., Cantonese "士多啤梨" for strawberry)\n'
+    "2. **Output**:\n"
+    "- A `socio_cultural_score` (0 to 10).\n"
+    "- An array of `issues` if found.\n"
+    "- A short `summary` with assessment.\n\n"
+    "given the code-switched text {data_generation_result}."
+)
 
 
 class _DimensionScorer(ScorerAgent):
-    """Shared scoring path: prompt with the rubric, parse ``{score, rationale}``."""
+    """Shared scoring path for a SwitchLingua-style single-dimension judge."""
 
-    #: One-line description of the dimension, injected into the prompt.
-    rubric: str = ""
+    #: SwitchLingua role prompt; uses {data_generation_result} (and {cs_ratio}).
+    prompt: str = ""
+    #: Key holding the 0–10 score in the model's JSON reply.
+    score_key: str = "score"
+    #: Keys whose values (joined) become the AgentScore rationale.
+    rationale_keys: tuple[str, ...] = ()
+    #: Example JSON shape appended to enforce a parseable reply.
+    response_shape: str = ""
+
+    def _format_prompt(self, sample: CSSample) -> str:
+        data = f"{sample.text}\n(translation: {sample.translation or 'n/a'})"
+        body = self.prompt.format(
+            data_generation_result=data,
+            cs_ratio=sample.request.code_switching.ratio,
+        )
+        return f"{body}\n\n{json_only_instruction(self.response_shape)}"
+
+    def _rationale(self, data: dict) -> str:
+        parts: list[str] = []
+        for key in self.rationale_keys:
+            value = data.get(key)
+            if value:
+                parts.append(value if isinstance(value, str) else str(value))
+        return " — ".join(parts)
 
     async def score(self, sample: CSSample) -> AgentScore:
-        prompt = _build_score_prompt(sample, self.rubric)
-        response = await self.llm.complete(as_user(prompt), system=_SYSTEM)
-        out = parse_model(response.text, _ScoreOutput)
-        score = max(0.0, min(10.0, out.score))  # clamp to AgentScore's 0–10 bound
-        return AgentScore(agent=self.name, score=score, rationale=out.rationale)
+        response = await self.llm.complete(as_user(self._format_prompt(sample)), system=_SYSTEM)
+        data = parse_json(response.text)
+        if not isinstance(data, dict):
+            raise PromptParseError(f"{self.name}: expected a JSON object, got {type(data).__name__}")
+        try:
+            raw = float(data[self.score_key])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PromptParseError(
+                f"{self.name}: missing or non-numeric {self.score_key!r} in model reply"
+            ) from exc
+        score = max(0.0, min(10.0, raw))  # clamp to AgentScore's 0–10 bound
+        return AgentScore(agent=self.name, score=score, rationale=self._rationale(data))
 
 
 class FluencyAgent(_DimensionScorer):
     """Verifies grammaticality and the absence of broken morphemes."""
 
     name = "FluencyAgent"
-    rubric = (
-        "Grammaticality and morphological integrity — is the utterance grammatical "
-        "in both languages at the switch points, with no broken words, illformed "
-        "morphology, or agreement errors? Penalize ungrammatical switches and "
-        "broken morphemes."
+    prompt = FLUENCY_PROMPT
+    score_key = "fluency_score"
+    rationale_keys = ("summary", "errors")
+    response_shape = (
+        '{"fluency_score": <0-10>, "errors": [{"description": "...", '
+        '"constraint_violated": "..."}], "summary": "..."}'
     )
 
 
 class NaturalnessAgent(_DimensionScorer):
-    """Estimates pragmatic plausibility with a domain-conditioned LM."""
+    """Estimates pragmatic plausibility from a bilingual speaker's perspective."""
 
     name = "NaturalnessAgent"
-    rubric = (
-        "Naturalness and pragmatic plausibility — would a real speaker with this "
-        "persona actually say this in this setting? Reward idiomatic, fluent phrasing "
-        "and penalize stilted, translated-sounding, or implausible utterances."
-    )
+    prompt = NATURALNESS_PROMPT
+    score_key = "naturalness_score"
+    rationale_keys = ("summary", "observations")
+    response_shape = '{"naturalness_score": <0-10>, "observations": ["..."], "summary": "..."}'
 
 
 class CSRatioAgent(_DimensionScorer):
     """Checks whether the token-level language ratio matches the user target."""
 
     name = "CSRatioAgent"
-    rubric = (
-        "Code-switching ratio and structure — does the proportion of "
-        "embedded-language (L2) tokens match the target ratio in the spec, and does "
-        "the switching match the requested type and discourse function? Penalize "
-        "under- or over-switching and the wrong switch structure."
-    )
+    prompt = CS_RATIO_PROMPT
+    score_key = "ratio_score"
+    rationale_keys = ("computed_ratio", "notes")
+    response_shape = '{"ratio_score": <0-10>, "computed_ratio": "66% : 34%", "notes": "..."}'
 
 
 class SocialCultureAgent(_DimensionScorer):
     """Validates register, borrowed lexicon, and cultural appropriateness."""
 
     name = "SocialCultureAgent"
-    rubric = (
-        "Sociolinguistic appropriateness — are the register, borrowed lexicon, and "
-        "cultural references appropriate for this persona, topic, and conversation "
-        "type? Penalize mismatched register and culturally implausible choices."
-    )
+    prompt = SOCIAL_CULTURAL_PROMPT
+    score_key = "socio_cultural_score"
+    rationale_keys = ("summary", "issues")
+    response_shape = '{"socio_cultural_score": <0-10>, "issues": ["..."], "summary": "..."}'
