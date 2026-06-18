@@ -32,7 +32,8 @@ FLUENCY_PROMPT = (
     "- A `fluency_score` (0 to 10).\n"
     "- A list of identified `errors` (if any), with `description` and `constraint_violated`\n"
     "- A short `summary` of overall fluency.\n"
-    "given the code-switched text {data_generation_result}."
+    "given the code-switched text {data_generation_result}.\n"
+    "Always answer in English in your report."
 )
 
 NATURALNESS_PROMPT = (
@@ -45,7 +46,8 @@ NATURALNESS_PROMPT = (
     "- A `naturalness_score` (0 to 10).\n"
     "- A list of `observations` about unnatural phrases.\n"
     "- A `summary` describing overall authenticity.\n"
-    "given the code-switched text {data_generation_result}."
+    "given the code-switched text {data_generation_result}.\n"
+    "Always answer in English in your report."
 )
 
 CS_RATIO_PROMPT = (
@@ -55,7 +57,8 @@ CS_RATIO_PROMPT = (
     "- A `ratio_score` (0 to 10) reflecting target match.\n"
     '- A `computed_ratio` breakdown (e.g., "66% : 34%").\n'
     "- A `notes` field with observations.\n\n"
-    "given the desired ratio: {cs_ratio} and text: {data_generation_result}."
+    "given the desired ratio: {cs_ratio} and text: {data_generation_result}.\n"
+    "Always answer in English in your report."
 )
 
 SOCIAL_CULTURAL_PROMPT = (
@@ -66,8 +69,8 @@ SOCIAL_CULTURAL_PROMPT = (
     "- A `socio_cultural_score` (0 to 10).\n"
     "- An array of `issues` if found.\n"
     "- A short `summary` with assessment.\n\n"
-    "given the code-switched text {data_generation_result}."
-    "Always answer in English for your report"
+    "given the code-switched text {data_generation_result}.\n"
+    "Always answer in English in your report."
 )
 
 
