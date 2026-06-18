@@ -165,12 +165,11 @@ class GenerationAgent(GeneratorAgent):
 
         return CSSample(
             text=text,
-            translation=None,
             request=ctx.request,
             metadata={
                 "generator": self.name,
                 "refined": ctx.feedback is not None,
-                "topic": data.get("topic"),
+                "topic": ctx.request.basic.topic,
                 "instances": instances,
             },
         )

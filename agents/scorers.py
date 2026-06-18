@@ -84,9 +84,8 @@ class _DimensionScorer(ScorerAgent):
     response_shape: str = ""
 
     def _format_prompt(self, sample: CSSample) -> str:
-        data = f"{sample.text}\n(translation: {sample.translation or 'n/a'})"
         body = self.prompt.format(
-            data_generation_result=data,
+            data_generation_result=sample.text,
             cs_ratio=sample.request.code_switching.ratio,
         )
         return f"{body}\n\n{json_only_instruction(self.response_shape)}"

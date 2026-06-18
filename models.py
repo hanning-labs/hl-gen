@@ -16,9 +16,6 @@ class CSSample(BaseModel):
     """A candidate (or accepted) code-switched utterance."""
 
     text: str = Field(..., description="The code-switched sentence in the matrix language.")
-    translation: str | None = Field(
-        None, description="Monolingual gloss/translation, if produced."
-    )
     request: SynthesisRequest
     metadata: dict = Field(default_factory=dict)
 

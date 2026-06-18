@@ -52,7 +52,6 @@ async def main() -> None:
     gen = GenerationAgent(llm)
     sample = await gen.generate(GenerationContext(request=REQUEST))
     print("text       :", sample.text)
-    print("translation:", sample.translation)
     print("topic      :", sample.metadata.get("topic"))
     print("instances  :", sample.metadata.get("instances"))
 
