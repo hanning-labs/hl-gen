@@ -1,11 +1,7 @@
-"""Manual smoke test for the generator (and scorers) against the local model.
+"""Manual verification for the current step. Run:  python test.py
 
-Run from the code_switch/ directory (or anywhere the package is installed):
-
-    python test.py
-
-Loads the local model once, generates one code-switched sample from a request,
-prints it, then runs the four scorers on what was generated.
+P0.6 — FileSampleStore (no model needed): save an accepted sample to JSONL and
+read it back.
 """
 
 import asyncio
@@ -17,15 +13,8 @@ from code_switch import (
     CodeSwitchType,
     SynthesisRequest,
 )
-from code_switch.agents.generation import GenerationAgent
-from code_switch.agents.scorers import (
-    CSRatioAgent,
-    FluencyAgent,
-    NaturalnessAgent,
-    SocialCultureAgent,
-)
-from code_switch.llm import LocalClient
-from code_switch.models import GenerationContext
+from code_switch.models import AgentScore, CSSample, ScoreReport
+from code_switch.storage import FileSampleStore, SampleStore
 
 REQUEST = SynthesisRequest(
     code_switching=CodeSwitchingSpec(
@@ -44,21 +33,22 @@ REQUEST = SynthesisRequest(
 
 
 async def main() -> None:
-    # Swap in a smaller model if 7B won't fit, e.g.:
-    # llm = LocalClient(model="Qwen/Qwen2.5-0.5B-Instruct")
-    llm = LocalClient()
+    store = FileSampleStore("out/samples.jsonl")
+    print("is SampleStore:", isinstance(store, SampleStore))
 
-    print("=== generating ===")
-    gen = GenerationAgent(llm)
-    sample = await gen.generate(GenerationContext(request=REQUEST))
-    print("text       :", sample.text)
-    print("topic      :", sample.metadata.get("topic"))
-    print("instances  :", sample.metadata.get("instances"))
+    sample = CSSample(text="我哋去咗 cinema 睇戲。", request=REQUEST)
+    report = ScoreReport(
+        scores=[AgentScore(agent="FluencyAgent", score=9.0, rationale="clean")],
+        final_score=9.0,
+        passed=True,
+    )
 
-    print("\n=== scoring the generated sample ===")
-    for agent_cls in (FluencyAgent, NaturalnessAgent, CSRatioAgent, SocialCultureAgent):
-        score = await agent_cls(llm).score(sample)
-        print(f"{score.agent:18} {score.score:>5} — {score.rationale}")
+    sample_id = await store.save(sample, report)
+    print("saved id:", sample_id)
+
+    records = store.read_all()
+    print("record count:", len(records))
+    print("last record:", records[-1])
 
 
 if __name__ == "__main__":

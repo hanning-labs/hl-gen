@@ -45,8 +45,9 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
 - [~] **P0.5 — `SummarizeAgent.summarize`** (`agents/summarize.py`) — deterministic weighted mean
   of the scorers' 0–10 scores; `passed = final >= threshold`; equal weights by default
   (optional `weights` map by agent name); no model call.
-- [ ] **P0.6 — Reference `SampleStore`** (`storage/file_store.py`) — JSONL/file store implementing
-  the protocol; export from `storage/__init__.py`. No model.
+- [~] **P0.6 — Reference `SampleStore`** (`storage/file_store.py`) — `FileSampleStore`: append-only
+  JSONL (`{id, saved_at, sample, report}`), threaded writes under a lock, `read_all()` helper;
+  exported from `storage/__init__.py`. No model.
 - [ ] **P0.7 — `AcceptanceAgent.accept`** (`agents/acceptance.py`) — attach scores+provenance,
   persist via store. Also fold a **flattened snapshot** of the request's character + basic
   settings + code-switching spec into `metadata` (the internal request has no downstream
