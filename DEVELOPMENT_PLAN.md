@@ -30,13 +30,15 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
   `model.generate` inside `asyncio.to_thread` guarded by an `asyncio.Lock`; decode only new
   tokens; return `LLMResponse(text, model, usage, raw)`; forward `**kwargs` to `generate`.
   `ClaudeClient` stays a stub. Tested live by the user against Qwen2.5-7B-Instruct.
-- [~] **P0.2 — Prompt-build + JSON-parse helper** (`prompting.py`) — render request/principles/
-  tool_context/feedback into prompts; robustly extract+validate JSON (no native schema mode).
-- [~] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`). Uses SwitchLingua
+- [x] **P0.2 — Prompt helpers + JSON parsing** (`prompting.py`) — `extract_json`/`parse_json`/
+  `PromptParseError` + `as_user`, `json_only_instruction`, `describe_feedback`. (Orphaned
+  context-renderers and `parse_model` were pruned after the SwitchLingua pivot.)
+- [x] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`). Uses SwitchLingua
   `DATA_GENERATION_PROMPT` (placeholders filled from the request; `education_level`/
   `news_article`/`mcp_result` from `tool_context` or blank); parses `{topic, instances}` and
-  takes `instances[0]`; appends refinement feedback on retry rounds.
-- [~] **P0.4 — Four scorer agents** (`agents/scorers.py`) — Fluency / Naturalness / CSRatio /
+  takes `instances[0]`; `metadata.topic` from the request; appends refinement feedback on
+  retry rounds. No translation (removed from `CSSample`).
+- [x] **P0.4 — Four scorer agents** (`agents/scorers.py`) — Fluency / Naturalness / CSRatio /
   SocialCulture. Prompts adapted from SwitchLingua (`core/prompt.py`): each agent's own role
   prompt + JSON schema; shared `_DimensionScorer` maps the dimension's score field →
   `AgentScore.score`, summary/diagnostics → rationale.
