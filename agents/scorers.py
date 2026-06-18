@@ -67,6 +67,7 @@ SOCIAL_CULTURAL_PROMPT = (
     "- An array of `issues` if found.\n"
     "- A short `summary` with assessment.\n\n"
     "given the code-switched text {data_generation_result}."
+    "Always answer in English for your report"
 )
 
 
