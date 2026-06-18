@@ -32,8 +32,10 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
   `ClaudeClient` stays a stub. Tested live by the user against Qwen2.5-7B-Instruct.
 - [~] **P0.2 — Prompt-build + JSON-parse helper** (`prompting.py`) — render request/principles/
   tool_context/feedback into prompts; robustly extract+validate JSON (no native schema mode).
-- [x] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`). Prompts via `prompting.py`;
-  parses `{text, translation}`; attaches `request` + `metadata={generator, refined}`.
+- [~] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`). Uses SwitchLingua
+  `DATA_GENERATION_PROMPT` (placeholders filled from the request; `education_level`/
+  `news_article`/`mcp_result` from `tool_context` or blank); parses `{topic, instances}` and
+  takes `instances[0]`; appends refinement feedback on retry rounds.
 - [~] **P0.4 — Four scorer agents** (`agents/scorers.py`) — Fluency / Naturalness / CSRatio /
   SocialCulture. Prompts adapted from SwitchLingua (`core/prompt.py`): each agent's own role
   prompt + JSON schema; shared `_DimensionScorer` maps the dimension's score field →
@@ -49,7 +51,11 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
 
 ## Priority 1 — Close the refinement loop and make it usable
 
-- [ ] **P1.1 — `RefinerAgent.refine`** (`agents/refiner.py`).
+- [ ] **P1.1 — `RefinerAgent.refine`** (`agents/refiner.py`). Use SwitchLingua `REFINER_PROMPT`
+  (`{summary}` = the scorers' rationales). Note the mismatch: SwitchLingua's refiner outputs
+  *refined text* directly, but our `EditorAgent.refine` returns `RefinementFeedback` that the
+  generator then regenerates from — resolve how to fit (e.g. carry the refined text as the
+  feedback `suggestions`, or have generation reuse it).
 - [ ] **P1.2 — Seed default `LinguisticPrinciples`** (`principles.py`).
 - [ ] **P1.3 — Config + runnable example** (`examples/`, README) — `LocalClient` config surface
   (`model_id`, `device`, `dtype`, `max_new_tokens`); end-to-end demo.
