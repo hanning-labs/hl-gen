@@ -1,7 +1,8 @@
 """Manual verification for the current step. Run:  python test.py
 
-P0.7 — AcceptanceAgent.accept (no model needed): accept a sample, confirm the
-flattened spec + scores land in metadata and the record is persisted via the store.
+End-to-end pipeline smoke test (live, loads the local model): wire the default
+pipeline and run one request through generate -> score -> summarize ->
+accept/refine. Prints the outcome and, if accepted, the persisted record.
 """
 
 import asyncio
@@ -12,11 +13,13 @@ from code_switch import (
     CodeSwitchingSpec,
     CodeSwitchType,
     SynthesisRequest,
+    build_default_pipeline,
 )
-from code_switch.agents.acceptance import AcceptanceAgent
-from code_switch.models import AgentScore, CSSample, ScoreReport
+from code_switch.llm import LocalClient
 from code_switch.storage import FileSampleStore
 
+# max_refinement_rounds kept low for a quicker smoke run; lower score_threshold
+# if you want to make the accept (persist) path easier to hit with a local model.
 REQUEST = SynthesisRequest(
     code_switching=CodeSwitchingSpec(
         type=CodeSwitchType.INTRA_SENTENTIAL, function="emphasis", ratio=0.3
@@ -30,35 +33,35 @@ REQUEST = SynthesisRequest(
         topic="movies",
         conversation_type="casual chat",
     ),
+    score_threshold=7.0,
+    max_refinement_rounds=2,
 )
 
 
 async def main() -> None:
-    store = FileSampleStore("out/samples.jsonl")
-    acceptor = AcceptanceAgent(llm=None, store=store)  # accept() never touches the llm
+    # Swap in a smaller model if 7B won't fit, e.g. model="Qwen/Qwen2.5-0.5B-Instruct".
+    llm = LocalClient()
+    store = FileSampleStore("out/pipeline_samples.jsonl")
+    pipeline = build_default_pipeline(llm, store)
 
-    sample = CSSample(text="我哋去咗 cinema 睇咗 a great movie。", request=REQUEST)
-    report = ScoreReport(
-        scores=[
-            AgentScore(agent="FluencyAgent", score=9.0, rationale="grammatical"),
-            AgentScore(agent="CSRatioAgent", score=8.0, rationale="66% : 34%"),
-        ],
-        final_score=8.5,
-        passed=True,
-    )
+    print("=== running pipeline ===")
+    sample = await pipeline.run(REQUEST)
 
-    await acceptor.accept(sample, report)
+    if sample is None:
+        print("result: REJECTED (no attempt cleared the threshold within the rounds)")
+        return
 
-    print("=== metadata after accept ===")
-    for key in ("accepted_by", "final_score", "passed", "scores", "spec"):
-        print(f"{key}: {sample.metadata.get(key)}")
+    print("result: ACCEPTED")
+    print("text       :", sample.text)
+    print("final_score:", sample.metadata.get("final_score"))
+    print("passed     :", sample.metadata.get("passed"))
+    print("scores     :", sample.metadata.get("scores"))
 
-    print("\n=== persisted record ===")
     record = store.read_all()[-1]
-    print("id:", record["id"])
-    print("saved_at:", record["saved_at"])
-    print("stored metadata.spec:", record["sample"]["metadata"]["spec"])
-    print("stored report.passed:", record["report"]["passed"])
+    print("\n=== persisted record ===")
+    print("id        :", record["id"])
+    print("saved_at  :", record["saved_at"])
+    print("spec      :", record["sample"]["metadata"]["spec"])
 
 
 if __name__ == "__main__":

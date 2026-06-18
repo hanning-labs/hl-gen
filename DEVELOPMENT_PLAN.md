@@ -48,9 +48,9 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
 - [x] **P0.6 — Reference `SampleStore`** (`storage/file_store.py`) — `FileSampleStore`: append-only
   JSONL (`{id, saved_at, sample, report}`), threaded writes under a lock, `read_all()` helper;
   exported from `storage/__init__.py`. No model.
-- [~] **P0.7 — `AcceptanceAgent.accept`** (`agents/acceptance.py`) — attaches `accepted_by`,
+- [x] **P0.7 — `AcceptanceAgent.accept`** (`agents/acceptance.py`) — attaches `accepted_by`,
   `final_score`, `passed`, `scores`, and a flattened `spec` snapshot (persona + basic + CS
-  spec) to `metadata`, then persists via `store.save`. Done.
+  spec) to `metadata`, then persists via `store.save`.
 
 ## Priority 1 — Close the refinement loop and make it usable
 
