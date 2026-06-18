@@ -42,8 +42,9 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
   SocialCulture. Prompts adapted from SwitchLingua (`core/prompt.py`): each agent's own role
   prompt + JSON schema; shared `_DimensionScorer` maps the dimension's score field →
   `AgentScore.score`, summary/diagnostics → rationale.
-- [ ] **P0.5 — `SummarizeAgent.summarize`** (`agents/summarize.py`) — deterministic weighted mean
-  + `passed` threshold; no model call.
+- [~] **P0.5 — `SummarizeAgent.summarize`** (`agents/summarize.py`) — deterministic weighted mean
+  of the scorers' 0–10 scores; `passed = final >= threshold`; equal weights by default
+  (optional `weights` map by agent name); no model call.
 - [ ] **P0.6 — Reference `SampleStore`** (`storage/file_store.py`) — JSONL/file store implementing
   the protocol; export from `storage/__init__.py`. No model.
 - [ ] **P0.7 — `AcceptanceAgent.accept`** (`agents/acceptance.py`) — attach scores+provenance,
