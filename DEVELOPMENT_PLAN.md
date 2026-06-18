@@ -32,7 +32,7 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
   `ClaudeClient` stays a stub. Tested live by the user against Qwen2.5-7B-Instruct.
 - [~] **P0.2 — Prompt-build + JSON-parse helper** (`prompting.py`) — render request/principles/
   tool_context/feedback into prompts; robustly extract+validate JSON (no native schema mode).
-- [ ] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`).
+- [~] **P0.3 — `GenerationAgent.generate`** (`agents/generation.py`).
 - [ ] **P0.4 — Four scorer agents** (`agents/scorers.py`) — Fluency / Naturalness / CSRatio /
   SocialCulture; shared scoring helper + per-dimension rubrics returning `{score, rationale}`.
 - [ ] **P0.5 — `SummarizeAgent.summarize`** (`agents/summarize.py`) — deterministic weighted mean
