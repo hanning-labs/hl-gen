@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from ..llm.base import LLMClient
-from ..models import CSSample, ScoreReport
-from ..storage.base import SampleStore
+from llm.base import LLMClient
+from models import CSSample, ScoreReport
+from storage.base import SampleStore
 from .base import SinkAgent
 
 

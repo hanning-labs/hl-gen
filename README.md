@@ -38,8 +38,9 @@ Input Parameters + Linguistic Principles + Tool context
 ## Usage (once agents are implemented)
 
 ```python
-from code_switch import build_default_pipeline, SynthesisRequest
-from code_switch.llm import ClaudeClient
+from orchestrator import build_default_pipeline
+from config import SynthesisRequest
+from llm import ClaudeClient
 
 pipeline = build_default_pipeline(ClaudeClient(), my_store, tools=[...])
 sample = await pipeline.run(request)  # CSSample if accepted, else None

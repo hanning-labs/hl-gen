@@ -54,11 +54,12 @@ Status legend: `[ ]` todo · `[~]` in progress (awaiting user test/approval) · 
 
 ## Priority 1 — Close the refinement loop and make it usable
 
-- [ ] **P1.1 — `RefinerAgent.refine`** (`agents/refiner.py`). Use SwitchLingua `REFINER_PROMPT`
-  (`{summary}` = the scorers' rationales). Note the mismatch: SwitchLingua's refiner outputs
-  *refined text* directly, but our `EditorAgent.refine` returns `RefinementFeedback` that the
-  generator then regenerates from — resolve how to fit (e.g. carry the refined text as the
-  feedback `suggestions`, or have generation reuse it).
+- [~] **P1.1 — `RefinerAgent.refine`** (`agents/refiner.py`). Adapts SwitchLingua `REFINER_PROMPT`
+  (`{summary}` = the scorers' rationales, score + notes, lowest-scoring first). Mismatch resolved
+  by *keeping our architecture*: the refiner emits structured `RefinementFeedback` (`failures` +
+  `suggestions`) — not finished text — which the generator already appends to its prompt on retry
+  rounds via `describe_feedback`. Tolerant JSON parsing (string-or-list `failures`). Awaiting user
+  test/approval.
 - [ ] **P1.2 — Seed default `LinguisticPrinciples`** (`principles.py`).
 - [ ] **P1.3 — Config + runnable example** (`examples/`, README) — `LocalClient` config surface
   (`model_id`, `device`, `dtype`, `max_new_tokens`); end-to-end demo.

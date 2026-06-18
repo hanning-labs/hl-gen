@@ -3,7 +3,7 @@
 The generation prompt is adapted from the SwitchLingua project
 (https://github.com/Shelton1013/SwitchLingua, ``core/prompt.py`` —
 ``DATA_GENERATION_PROMPT``). Placeholders are filled from our
-:class:`~code_switch.config.SynthesisRequest`; fields SwitchLingua expects but we
+:class:`~config.SynthesisRequest`; fields SwitchLingua expects but we
 don't model (``education_level``, ``news_article``, ``mcp_result``) are pulled
 from ``ctx.tool_context`` when present and otherwise left blank. On refinement
 rounds the prior attempt's feedback is appended so the loop can revise.
@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import json
 
-from ..models import CSSample, GenerationContext
-from ..prompting import PromptParseError, as_user, describe_feedback, parse_json
+from models import CSSample, GenerationContext
+from prompting import PromptParseError, as_user, describe_feedback, parse_json
 from .base import GeneratorAgent
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."

@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..models import CSSample, ScoreReport
+from models import CSSample, ScoreReport
 
 
 class FileSampleStore:

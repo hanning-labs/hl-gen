@@ -11,8 +11,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .llm.base import Message
-from .models import RefinementFeedback
+from llm.base import Message
+from models import RefinementFeedback
 
 __all__ = [
     "PromptParseError",

@@ -9,28 +9,28 @@ from __future__ import annotations
 
 import pytest
 
-from code_switch import (
+from config import (
     BasicSetting,
     CharacterSetting,
     CodeSwitchingSpec,
     CodeSwitchType,
     SynthesisRequest,
 )
-from code_switch.agents.base import (
+from agents.base import (
     EditorAgent,
     GeneratorAgent,
     ReducerAgent,
     ScorerAgent,
     SinkAgent,
 )
-from code_switch.models import (
+from models import (
     AgentScore,
     CSSample,
     GenerationContext,
     RefinementFeedback,
     ScoreReport,
 )
-from code_switch.orchestrator import SynthesisPipeline
+from orchestrator import SynthesisPipeline
 
 
 def make_request(*, threshold: float = 8.0, max_rounds: int = 3) -> SynthesisRequest:

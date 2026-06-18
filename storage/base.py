@@ -1,6 +1,6 @@
 """Persistence interface for accepted samples.
 
-The :class:`~code_switch.agents.acceptance.AcceptanceAgent`
+The :class:`~agents.acceptance.AcceptanceAgent`
 (the pipeline Sink) writes here. Concrete stores (filesystem, DB, the planned
 audio corpus DB) implement this protocol in a later pass.
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from ..models import CSSample, ScoreReport
+from models import CSSample, ScoreReport
 
 
 @runtime_checkable

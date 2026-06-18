@@ -14,28 +14,28 @@ from __future__ import annotations
 
 import asyncio
 
-from .agents.acceptance import AcceptanceAgent
-from .agents.base import (
+from agents.acceptance import AcceptanceAgent
+from agents.base import (
     EditorAgent,
     GeneratorAgent,
     ReducerAgent,
     ScorerAgent,
     SinkAgent,
 )
-from .agents.generation import GenerationAgent
-from .agents.refiner import RefinerAgent
-from .agents.scorers import (
+from agents.generation import GenerationAgent
+from agents.refiner import RefinerAgent
+from agents.scorers import (
     CSRatioAgent,
     FluencyAgent,
     NaturalnessAgent,
     SocialCultureAgent,
 )
-from .agents.summarize import SummarizeAgent
-from .config import SynthesisRequest
-from .llm.base import LLMClient
-from .models import CSSample, GenerationContext
-from .storage.base import SampleStore
-from .tools.base import ToolProvider
+from agents.summarize import SummarizeAgent
+from config import SynthesisRequest
+from llm.base import LLMClient
+from models import CSSample, GenerationContext
+from storage.base import SampleStore
+from tools.base import ToolProvider
 
 
 class SynthesisPipeline:

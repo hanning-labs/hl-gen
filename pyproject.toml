@@ -16,18 +16,14 @@ claude = ["anthropic>=0.40"]
 local = ["transformers>=4.44", "torch>=2.2", "accelerate>=0.30"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
-# This directory IS the `code_switch` package.
+# This directory is the import root: top-level modules plus subpackages, with no
+# wrapping `code_switch` package. Modules import each other by their bare names
+# (e.g. `from models import ...`, `from agents.base import ...`).
 [tool.setuptools]
-packages = [
-    "code_switch",
-    "code_switch.llm",
-    "code_switch.agents",
-    "code_switch.tools",
-    "code_switch.storage",
-]
-
-[tool.setuptools.package-dir]
-"code_switch" = "."
+py-modules = ["config", "models", "orchestrator", "principles", "prompting"]
+packages = ["agents", "llm", "tools", "storage"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Put the project root on sys.path so tests can import the bare top-level modules.
+pythonpath = ["."]

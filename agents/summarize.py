@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ..llm.base import LLMClient
-from ..models import AgentScore, ScoreReport
+from llm.base import LLMClient
+from models import AgentScore, ScoreReport
 from .base import ReducerAgent
 
 

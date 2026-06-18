@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from ..llm.base import LLMClient
-from ..models import (
+from llm.base import LLMClient
+from models import (
     AgentScore,
     CSSample,
     GenerationContext,

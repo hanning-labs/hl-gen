@@ -12,8 +12,8 @@ score field onto :class:`AgentScore` (rationale from the summary/notes fields).
 
 from __future__ import annotations
 
-from ..models import AgentScore, CSSample
-from ..prompting import PromptParseError, as_user, json_only_instruction, parse_json
+from models import AgentScore, CSSample
+from prompting import PromptParseError, as_user, json_only_instruction, parse_json
 from .base import ScorerAgent
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."

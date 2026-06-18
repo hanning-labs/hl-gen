@@ -12,7 +12,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from .principles import LinguisticPrinciples
+from principles import LinguisticPrinciples
 
 
 class CodeSwitchType(str, Enum):
