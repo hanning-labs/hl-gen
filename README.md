@@ -35,14 +35,28 @@ Input Parameters + Linguistic Principles + Tool context
 | The refinement loop          | `orchestrator.py` (`SynthesisPipeline.run`)             |
 | LLM backend (swappable)      | `llm/base.py` (`LLMClient`) + `llm/claude.py` stub      |
 
-## Usage (once agents are implemented)
+## Usage
+
+```bash
+pip install -e ".[dev,local]"   # installs transformers, torch, accelerate
+python examples/run_local.py    # end-to-end run; writes to out/samples.jsonl
+```
 
 ```python
 from orchestrator import build_default_pipeline
-from config import SynthesisRequest
-from llm import ClaudeClient
+from storage.file_store import FileSampleStore
+from llm import LocalClient
+from config import SynthesisRequest, ...
 
-pipeline = build_default_pipeline(ClaudeClient(), my_store, tools=[...])
+# LocalClient config surface:
+#   model           HF model id           default: "Qwen/Qwen2.5-7B-Instruct"
+#   device          device_map            default: None → "auto" ("cpu", "cuda", "mps")
+#   dtype           torch_dtype           default: "auto" ("float16", "bfloat16")
+#   max_new_tokens  generation length     default: 1024
+llm = LocalClient(model="Qwen/Qwen2.5-7B-Instruct", device="cpu")
+store = FileSampleStore("out/samples.jsonl")
+
+pipeline = build_default_pipeline(llm, store)
 sample = await pipeline.run(request)  # CSSample if accepted, else None
 ```
 
@@ -56,6 +70,7 @@ sample = await pipeline.run(request)  # CSSample if accepted, else None
 ## Dev
 
 ```bash
-pip install -e ".[dev]"   # pydantic + pytest + pytest-asyncio
-pytest                    # loop control-flow tests (mock agents)
+pip install -e ".[dev,local]"   # pydantic + pytest + transformers + torch
+pytest                          # loop control-flow tests (mock agents)
+python examples/run_local.py    # live end-to-end smoke run
 ```
