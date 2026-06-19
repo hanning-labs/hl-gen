@@ -12,10 +12,33 @@ rounds the prior attempt's feedback is appended so the loop can revise.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from models import CSSample, GenerationContext
 from prompting import PromptParseError, as_user, describe_feedback, parse_json
 from .base import GeneratorAgent
+
+
+def _format_news(news_ctx: Any) -> str:
+    """Render a tool_context news value into a prompt-friendly string."""
+    if not news_ctx:
+        return ""
+    if isinstance(news_ctx, str):
+        return news_ctx
+    if not isinstance(news_ctx, dict):
+        return str(news_ctx)
+    articles = news_ctx.get("articles") or []
+    if not articles:
+        return ""
+    lines = []
+    for a in articles:
+        title = a.get("title", "").strip()
+        body = a.get("body", "").strip()
+        if title:
+            lines.append(f"- {title}")
+            if body:
+                lines.append(f"  {body}")
+    return "\n".join(lines)
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
 
@@ -128,7 +151,7 @@ class GenerationAgent(GeneratorAgent):
             "gender": ch.gender,
             "age": ch.age,
             "education_level": tc.get("education_level", "unspecified"),
-            "news_article": tc.get("news", ""),
+            "news_article": _format_news(tc.get("news")),
             "conversation_type": b.conversation_type,
             "topic": b.topic,
             "mcp_result": tc.get("mcp", ""),

@@ -14,6 +14,7 @@ dependencies = [
 [project.optional-dependencies]
 claude = ["anthropic>=0.40"]
 local = ["transformers>=4.44", "torch>=2.2", "accelerate>=0.30"]
+tools = ["gdeltdoc>=1.5", "python-dotenv>=1.0"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 # This directory is the import root: top-level modules plus subpackages, with no
