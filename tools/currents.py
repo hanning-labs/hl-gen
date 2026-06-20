@@ -24,6 +24,78 @@ _BASE_URL = "https://api.currentsapi.services/v2/search"
 _BODY_TRUNCATE = 800  # chars per description kept in context
 
 
+# ISO 639-1 codes for the Currents API language filter.
+# Varieties that share a writing system (e.g. Cantonese / Mandarin) map to the
+# same code; unknown names fall back to the instance default.
+_LANGUAGE_TO_ISO: dict[str, str] = {
+    "afrikaans": "af",
+    "arabic": "ar",
+    "azerbaijani": "az",
+    "basque": "eu",
+    "belarusian": "be",
+    "bengali": "bn",
+    "bosnian": "bs",
+    "bulgarian": "bg",
+    "cantonese": "zh",
+    "catalan": "ca",
+    "chinese": "zh",
+    "croatian": "hr",
+    "czech": "cs",
+    "danish": "da",
+    "dutch": "nl",
+    "english": "en",
+    "estonian": "et",
+    "finnish": "fi",
+    "french": "fr",
+    "georgian": "ka",
+    "german": "de",
+    "greek": "el",
+    "gujarati": "gu",
+    "hebrew": "he",
+    "hindi": "hi",
+    "hungarian": "hu",
+    "icelandic": "is",
+    "indonesian": "id",
+    "irish": "ga",
+    "italian": "it",
+    "japanese": "ja",
+    "kazakh": "kk",
+    "korean": "ko",
+    "latvian": "lv",
+    "lithuanian": "lt",
+    "macedonian": "mk",
+    "malay": "ms",
+    "mandarin": "zh",
+    "marathi": "mr",
+    "mongolian": "mn",
+    "norwegian": "no",
+    "persian": "fa",
+    "polish": "pl",
+    "portuguese": "pt",
+    "punjabi": "pa",
+    "romanian": "ro",
+    "russian": "ru",
+    "serbian": "sr",
+    "slovak": "sk",
+    "slovene": "sl",
+    "somali": "so",
+    "spanish": "es",
+    "swahili": "sw",
+    "swedish": "sv",
+    "tagalog": "tl",
+    "tamil": "ta",
+    "telugu": "te",
+    "thai": "th",
+    "turkish": "tr",
+    "ukrainian": "uk",
+    "urdu": "ur",
+    "vietnamese": "vi",
+    "welsh": "cy",
+    "yoruba": "yo",
+    "zulu": "zu",
+}
+
+
 class CurrentsTool:
     """Fetches Currents API articles relevant to the request topic."""
 
@@ -40,18 +112,18 @@ class CurrentsTool:
         self.max_articles = max_articles
         self.language = language
 
-    def _fetch_sync(self, topic: str) -> dict[str, Any]:
+    def _fetch_sync(self, topic: str, language: str) -> dict[str, Any]:
         if not self.api_key:
             log.warning("CURRENTS_API_KEY not set — skipping news fetch")
             return {"articles": [], "source": "currents", "error": "CURRENTS_API_KEY not set"}
 
-        log.info("Fetching Currents articles  topic=%r  max=%d", topic, self.max_articles)
+        log.info("Fetching Currents articles  topic=%r  lang=%s  max=%d", topic, language, self.max_articles)
         try:
             resp = requests.get(
                 _BASE_URL,
                 params={
                     "keywords": topic,
-                    "language": self.language,
+                    "language": language,
                     "page_number": 1,
                     "page_size": self.max_articles,
                     "apiKey": self.api_key,
@@ -90,4 +162,8 @@ class CurrentsTool:
         }
 
     async def fetch(self, ctx: GenerationContext) -> dict[str, Any]:
-        return await asyncio.to_thread(self._fetch_sync, ctx.request.basic.topic)
+        l1 = ctx.request.character.first_language
+        language = _LANGUAGE_TO_ISO.get(l1.lower(), self.language)
+        if language == self.language and l1.lower() not in _LANGUAGE_TO_ISO:
+            log.warning("No ISO mapping for L1 %r — falling back to %r", l1, self.language)
+        return await asyncio.to_thread(self._fetch_sync, ctx.request.basic.topic, language)
