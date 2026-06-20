@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 from pydantic import BaseModel, Field
 
+from llm.local import DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL as LOCAL_DEFAULT_MODEL
 from config import (
     BasicSetting,
     CharacterSetting,
@@ -28,6 +29,15 @@ from models import CSSample
 from orchestrator import SynthesisPipeline
 
 
+class LocalClientConfig(BaseModel):
+    """LocalClient construction parameters, embeddable in a YAML batch config."""
+
+    model: str = LOCAL_DEFAULT_MODEL
+    device: str | None = None
+    dtype: str = "auto"
+    max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
+
+
 class BatchConfig(BaseModel):
     """Configuration for a batch synthesis run, loaded from a YAML file."""
 
@@ -36,6 +46,7 @@ class BatchConfig(BaseModel):
         None, description="Max concurrent pipelines. None → auto-detect from GPU VRAM."
     )
     output: str = "out/batch_samples.jsonl"
+    client: LocalClientConfig = Field(default_factory=LocalClientConfig)
     score_threshold: float = 7.0
     max_refinement_rounds: int = Field(3, ge=1)
 

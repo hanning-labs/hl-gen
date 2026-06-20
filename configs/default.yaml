@@ -3,6 +3,12 @@
 
 n: 20
 output: out/batch_samples.jsonl
+
+# client:
+#   model: Qwen/Qwen2.5-7B-Instruct   # any HF model id
+#   device: null                        # null → auto (cuda/mps/cpu)
+#   dtype: auto                         # auto | float16 | bfloat16
+#   max_new_tokens: 1024
 score_threshold: 7.0
 max_refinement_rounds: 3
 # max_concurrent: 2   # omit to auto-detect from GPU VRAM (~1 per 8 GB)

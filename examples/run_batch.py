@@ -46,7 +46,7 @@ async def main(config_path: str) -> None:
     print(f"  output      : {config.output}")
     print()
 
-    llm = LocalClient()
+    llm = LocalClient(**config.client.model_dump())
     store = FileSampleStore(config.output)
     pipeline = build_default_pipeline(llm, store)
 

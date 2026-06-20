@@ -8,7 +8,10 @@ exhausted-rounds path. Run with: ``pytest`` (needs the ``dev`` extra).
 from __future__ import annotations
 
 import pytest
+import yaml
 
+from batch import BatchConfig, LocalClientConfig
+from llm.local import DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL as LOCAL_DEFAULT_MODEL
 from config import (
     BasicSetting,
     CharacterSetting,
@@ -31,6 +34,45 @@ from models import (
     ScoreReport,
 )
 from orchestrator import SynthesisPipeline
+
+
+def test_local_client_config_defaults() -> None:
+    cfg = LocalClientConfig()
+    assert cfg.model == LOCAL_DEFAULT_MODEL
+    assert cfg.device is None
+    assert cfg.dtype == "auto"
+    assert cfg.max_new_tokens == DEFAULT_MAX_NEW_TOKENS
+
+
+def test_batch_config_client_defaults() -> None:
+    cfg = BatchConfig.model_validate({"n": 5})
+    assert isinstance(cfg.client, LocalClientConfig)
+    assert cfg.client.model == LOCAL_DEFAULT_MODEL
+
+
+def test_batch_config_client_from_yaml() -> None:
+    raw = yaml.safe_load("""
+n: 5
+client:
+  model: Qwen/Qwen2.5-14B-Instruct
+  device: cuda
+  dtype: bfloat16
+  max_new_tokens: 512
+""")
+    cfg = BatchConfig.model_validate(raw)
+    assert cfg.client.model == "Qwen/Qwen2.5-14B-Instruct"
+    assert cfg.client.device == "cuda"
+    assert cfg.client.dtype == "bfloat16"
+    assert cfg.client.max_new_tokens == 512
+
+
+def test_local_client_config_model_dump_matches_local_client_signature() -> None:
+    """model_dump() keys must match LocalClient.__init__ parameter names exactly."""
+    from llm.local import LocalClient
+    import inspect
+    sig_params = set(inspect.signature(LocalClient.__init__).parameters) - {"self"}
+    cfg_keys = set(LocalClientConfig().model_dump().keys())
+    assert cfg_keys == sig_params
 
 
 def make_request(*, threshold: float = 8.0, max_rounds: int = 3) -> SynthesisRequest:
