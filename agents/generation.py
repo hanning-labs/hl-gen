@@ -12,11 +12,14 @@ rounds the prior attempt's feedback is appended so the loop can revise.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from models import CSSample, GenerationContext
-from prompting import PromptParseError, as_user, describe_feedback, parse_json
+from prompting import PromptParseError, as_user, describe_feedback
 from .base import GeneratorAgent
+
+log = logging.getLogger(__name__)
 
 
 def _format_news(news_ctx: Any) -> str:
@@ -169,15 +172,18 @@ class GenerationAgent(GeneratorAgent):
         return prompt
 
     async def generate(self, ctx: GenerationContext) -> CSSample:
-        response = await self.llm.complete(as_user(self._fill_prompt(ctx)), system=_SYSTEM)
-        data = parse_json(response.text)
-        if not isinstance(data, dict):
-            raise PromptParseError(f"generation: expected a JSON object, got {type(data).__name__}")
+        def _validate(data: object) -> dict:
+            if not isinstance(data, dict):
+                raise PromptParseError(f"generation: expected a JSON object, got {type(data).__name__}")
+            instances = data.get("instances")
+            if not isinstance(instances, list) or not instances:
+                raise PromptParseError("generation reply had no non-empty 'instances' array")
+            return data
 
-        instances = data.get("instances")
-        if not isinstance(instances, list) or not instances:
-            raise PromptParseError("generation reply had no non-empty 'instances' array")
+        data = await self._complete_with_retry(as_user(self._fill_prompt(ctx)), system=_SYSTEM, validate=_validate)
+        instances = data["instances"]
 
+        log.debug("%s generated %d instances for topic=%r", self.name, len(instances), ctx.request.basic.topic)
         first = instances[0]
         if isinstance(first, str):
             text = first

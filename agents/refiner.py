@@ -18,7 +18,7 @@ generation path and one place that owns producing the sample.
 from __future__ import annotations
 
 from models import CSSample, RefinementFeedback, ScoreReport
-from prompting import PromptParseError, as_user, json_only_instruction, parse_json
+from prompting import PromptParseError, as_user, json_only_instruction
 from .base import EditorAgent
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
@@ -70,14 +70,14 @@ class RefinerAgent(EditorAgent):
         return f"{body}\n\n{json_only_instruction(_RESPONSE_SHAPE)}"
 
     async def refine(self, sample: CSSample, report: ScoreReport) -> RefinementFeedback:
-        response = await self.llm.complete(
-            as_user(self._fill_prompt(sample, report)), system=_SYSTEM
-        )
-        data = parse_json(response.text)
-        if not isinstance(data, dict):
-            raise PromptParseError(
-                f"{self.name}: expected a JSON object, got {type(data).__name__}"
-            )
+        name = self.name
+
+        def _validate(data: object) -> dict:
+            if not isinstance(data, dict):
+                raise PromptParseError(f"{name}: expected a JSON object, got {type(data).__name__}")
+            return data
+
+        data = await self._complete_with_retry(as_user(self._fill_prompt(sample, report)), system=_SYSTEM, validate=_validate)
 
         failures = data.get("failures") or []
         if isinstance(failures, str):  # tolerate a single string instead of a list

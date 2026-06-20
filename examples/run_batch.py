@@ -17,10 +17,13 @@ LocalClient config (edit the script or subclass BatchConfig to override):
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 from pathlib import Path
 
 import yaml
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 

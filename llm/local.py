@@ -16,9 +16,13 @@ a single device — while the event loop stays unblocked.
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from typing import Any
 
 from .base import LLMResponse, Message
+
+log = logging.getLogger(__name__)
 
 # Default local model. Override per instance; the 14B variant
 # ("Qwen/Qwen2.5-14B-Instruct") is a drop-in if you have the memory for it.
@@ -74,6 +78,7 @@ class LocalClient:
                 'Install them with: pip install -e ".[local]"'
             ) from exc
 
+        log.info("Loading model %r (device=%s, dtype=%s)", self.model, self.device or "auto", self.dtype)
         self._tokenizer = AutoTokenizer.from_pretrained(self.model)
         self._model = AutoModelForCausalLM.from_pretrained(
             self.model,
@@ -128,8 +133,22 @@ class LocalClient:
         if gen_kwargs.get("pad_token_id") is None and tokenizer.pad_token_id is None:
             gen_kwargs["pad_token_id"] = tokenizer.eos_token_id
 
-        with torch.inference_mode():
-            generated = model.generate(**inputs, **gen_kwargs)
+        t0 = time.monotonic()
+        try:
+            with torch.inference_mode():
+                generated = model.generate(**inputs, **gen_kwargs)
+        except torch.cuda.OutOfMemoryError:
+            torch.cuda.empty_cache()
+            log.warning("CUDA OOM — clearing cache and retrying once")
+            try:
+                with torch.inference_mode():
+                    generated = model.generate(**inputs, **gen_kwargs)
+            except torch.cuda.OutOfMemoryError as exc:
+                raise RuntimeError(
+                    "CUDA out of memory after cache clear. "
+                    "Try a smaller model, reduce max_new_tokens, or use device='cpu'."
+                ) from exc
+        log.debug("generate() took %.2fs", time.monotonic() - t0)
 
         prompt_len = inputs["input_ids"].shape[-1]
         new_tokens = generated[0][prompt_len:]

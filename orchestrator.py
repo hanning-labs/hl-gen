@@ -13,6 +13,9 @@ up to ``request.max_refinement_rounds`` attempts.
 from __future__ import annotations
 
 import asyncio
+import logging
+
+log = logging.getLogger(__name__)
 
 from agents.acceptance import AcceptanceAgent
 from agents.base import (
@@ -72,7 +75,9 @@ class SynthesisPipeline:
         ctx = GenerationContext(request=request)
         ctx.tool_context = await self._gather_tool_context(ctx)
 
-        for _ in range(request.max_refinement_rounds):
+        topic = request.basic.topic
+        for round_num in range(1, request.max_refinement_rounds + 1):
+            log.info("Round %d/%d  topic=%r", round_num, request.max_refinement_rounds, topic)
             sample = await self.generator.generate(ctx)
 
             scores = await asyncio.gather(*(s.score(sample) for s in self.scorers))
@@ -80,12 +85,18 @@ class SynthesisPipeline:
                 list(scores), threshold=request.score_threshold
             )
 
+            score_summary = "  ".join(f"{s.agent}={s.score:.1f}" for s in report.scores)
+            log.info("S_final=%.2f (%s)  passed=%s", report.final_score, score_summary, report.passed)
+
             if report.passed:
+                log.info("Sample accepted  topic=%r", topic)
                 await self.acceptor.accept(sample, report)
                 return sample
 
+            log.info("Sample rejected — refining  topic=%r", topic)
             ctx.feedback = await self.refiner.refine(sample, report)
 
+        log.warning("Exhausted %d rounds without acceptance  topic=%r", request.max_refinement_rounds, topic)
         return None
 
 

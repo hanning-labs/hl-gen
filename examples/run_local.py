@@ -22,8 +22,11 @@ Swap in a smaller model for quick iteration on a CPU-only box:
 """
 
 import asyncio
+import logging
 import sys
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 # Allow running from the repo root without installing the package.
 sys.path.insert(0, str(Path(__file__).parent.parent))

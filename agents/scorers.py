@@ -12,9 +12,13 @@ score field onto :class:`AgentScore` (rationale from the summary/notes fields).
 
 from __future__ import annotations
 
+import logging
+
 from models import AgentScore, CSSample
-from prompting import PromptParseError, as_user, json_only_instruction, parse_json
+from prompting import PromptParseError, as_user, json_only_instruction
 from .base import ScorerAgent
+
+log = logging.getLogger(__name__)
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
 
@@ -102,17 +106,23 @@ class _DimensionScorer(ScorerAgent):
         return " — ".join(parts)
 
     async def score(self, sample: CSSample) -> AgentScore:
-        response = await self.llm.complete(as_user(self._format_prompt(sample)), system=_SYSTEM)
-        data = parse_json(response.text)
-        if not isinstance(data, dict):
-            raise PromptParseError(f"{self.name}: expected a JSON object, got {type(data).__name__}")
-        try:
-            raw = float(data[self.score_key])
-        except (KeyError, TypeError, ValueError) as exc:
-            raise PromptParseError(
-                f"{self.name}: missing or non-numeric {self.score_key!r} in model reply"
-            ) from exc
-        score = max(0.0, min(10.0, raw))  # clamp to AgentScore's 0–10 bound
+        score_key = self.score_key
+        name = self.name
+
+        def _validate(data: object) -> dict:
+            if not isinstance(data, dict):
+                raise PromptParseError(f"{name}: expected a JSON object, got {type(data).__name__}")
+            if score_key not in data:
+                raise PromptParseError(f"{name}: missing {score_key!r} in model reply")
+            try:
+                float(data[score_key])
+            except (TypeError, ValueError) as exc:
+                raise PromptParseError(f"{name}: non-numeric {score_key!r} in model reply") from exc
+            return data
+
+        data = await self._complete_with_retry(as_user(self._format_prompt(sample)), system=_SYSTEM, validate=_validate)
+        score = max(0.0, min(10.0, float(data[self.score_key])))
+        log.debug("%s score=%.1f for sample %r", self.name, score, sample.text[:40])
         return AgentScore(agent=self.name, score=score, rationale=self._rationale(data))
 
 

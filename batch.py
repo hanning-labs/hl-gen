@@ -9,8 +9,11 @@ sized to GPU capacity.
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 from pydantic import BaseModel, Field
 
@@ -129,7 +132,7 @@ async def run_batch(
             result = await pipeline.run(req)
             completed += 1
             status = "accepted" if result is not None else "failed"
-            print(f"  [{completed}/{config.n}] {status}  topic={req.basic.topic}  L1={req.character.first_language}")
+            log.info("[%d/%d] %s  topic=%r  L1=%s", completed, config.n, status, req.basic.topic, req.character.first_language)
             return result
 
     return list(await asyncio.gather(*[_one(i) for i in range(config.n)]))
