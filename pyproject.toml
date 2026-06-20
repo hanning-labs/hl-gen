@@ -12,9 +12,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-claude = ["anthropic>=0.40"]
 local = ["transformers>=4.44,<5.0", "torch>=2.2", "accelerate>=0.30", "lm-format-enforcer>=0.10"]
-tools = ["python-dotenv>=1.0", "requests>=2.32", "pyyaml>=6.0"]
+tools = ["python-dotenv>=1.0", "requests>=2.32", "pyyaml>=6.0", "lingua-language-detector>=2.0"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 # This directory is the import root: top-level modules plus subpackages, with no
@@ -22,7 +21,7 @@ dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 # (e.g. `from models import ...`, `from agents.base import ...`).
 [tool.setuptools]
 py-modules = ["batch", "config", "models", "orchestrator", "principles", "prompting"]
-packages = ["agents", "llm", "tools", "storage"]
+packages = ["agents", "llm", "tools", "storage", "utils"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -54,16 +54,6 @@ NATURALNESS_PROMPT = (
     "Always answer in English in your report."
 )
 
-CS_RATIO_PROMPT = (
-    "You are **CSRatioAgent**. Evaluate the *Code-Switching Ratio* by counting "
-    "tokens for each language and comparing to desired ratio.\n\n"
-    "**Output**:\n"
-    "- A `ratio_score` (0 to 10) reflecting target match.\n"
-    '- A `computed_ratio` breakdown (e.g., "66% : 34%").\n'
-    "- A `notes` field with observations.\n\n"
-    "given the desired ratio: {cs_ratio} and text: {data_generation_result}.\n"
-    "Always answer in English in your report."
-)
 
 SOCIAL_CULTURAL_PROMPT = (
     "You are **SocioCulturalAgent**. Ensure code-switched text respects *cultural "
@@ -149,14 +139,54 @@ class NaturalnessAgent(_DimensionScorer):
     response_shape = '{"naturalness_score": <0-10>, "observations": ["..."], "summary": "..."}'
 
 
-class CSRatioAgent(_DimensionScorer):
-    """Checks whether the token-level language ratio matches the user target."""
+class CSRatioAgent(ScorerAgent):
+    """Checks whether the token-level language ratio matches the user target.
+
+    Deterministic: uses Unicode script ranges to count tokens per language —
+    no LLM call, no parse retries, no hallucinated counts.
+    """
 
     name = "CSRatioAgent"
-    prompt = CS_RATIO_PROMPT
-    score_key = "ratio_score"
-    rationale_keys = ("computed_ratio", "notes")
-    response_shape = '{"ratio_score": <0-10>, "computed_ratio": "66% : 34%", "notes": "..."}'
+
+    def __init__(
+        self,
+        llm=None,  # accepted for pipeline compatibility; never used
+        *,
+        name: str | None = None,
+        weight: float | None = None,
+        parse_retries: int | None = None,
+    ) -> None:
+        super().__init__(llm, name=name, weight=weight, parse_retries=parse_retries)
+
+    async def score(self, sample: CSSample) -> AgentScore:
+        from utils.cs_ratio import count_tokens, ratio_score
+
+        l1_lang = sample.request.character.first_language
+        l2_lang = sample.request.character.second_language
+        target = sample.request.code_switching.ratio
+
+        l1_count, l2_count = count_tokens(sample.text, l1_lang, l2_lang)
+        total = l1_count + l2_count
+
+        if total == 0:
+            log.warning("CSRatioAgent: no tokens detected in %r", sample.text[:40])
+            return AgentScore(
+                agent=self.name,
+                score=0.0,
+                rationale=f"No tokens detected (L1={l1_lang}, L2={l2_lang})",
+            )
+
+        actual = l2_count / total
+        computed_score = ratio_score(actual, target)
+
+        l1_pct = round(100 * l1_count / total)
+        l2_pct = 100 - l1_pct
+        rationale = (
+            f"{l1_pct}% : {l2_pct}% "
+            f"(L1={l1_count} tokens, L2={l2_count} tokens; target L2={target:.0%})"
+        )
+        log.debug("CSRatioAgent score=%.1f actual=%.2f target=%.2f", computed_score, actual, target)
+        return AgentScore(agent=self.name, score=computed_score, rationale=rationale)
 
 
 class SocialCultureAgent(_DimensionScorer):

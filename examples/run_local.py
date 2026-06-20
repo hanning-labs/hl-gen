@@ -41,6 +41,7 @@ from config import (
 from llm import LocalClient
 from orchestrator import build_default_pipeline
 from storage.file_store import FileSampleStore
+from tools.currents import CurrentsTool
 
 REQUEST = SynthesisRequest(
     code_switching=CodeSwitchingSpec(
@@ -68,7 +69,7 @@ REQUEST = SynthesisRequest(
 async def main() -> None:
     llm = LocalClient()  # override: LocalClient(model="...", device="cpu")
     store = FileSampleStore("out/samples.jsonl")
-    pipeline = build_default_pipeline(llm, store)
+    pipeline = build_default_pipeline(llm, store, tools=[CurrentsTool()])
 
     print("Running synthesis pipeline…")
     print(f"  model:    {llm.model}")

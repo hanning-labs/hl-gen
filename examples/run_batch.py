@@ -33,6 +33,7 @@ from batch import BatchConfig, BatchRun, count_existing, default_max_concurrent,
 from llm import LocalClient
 from orchestrator import build_default_pipeline
 from storage.file_store import FileSampleStore
+from tools.currents import CurrentsTool
 
 
 def _write_profile(
@@ -103,7 +104,7 @@ async def main(config_path: str) -> None:
 
     llm = LocalClient(**config.client.model_dump())
     store = FileSampleStore(config.output)
-    pipeline = build_default_pipeline(llm, store)
+    pipeline = build_default_pipeline(llm, store, tools=[CurrentsTool()])
 
     effective = config.model_copy(update={"n": remaining})
     batch_run = await run_batch(effective, pipeline, seed=config.seed)
