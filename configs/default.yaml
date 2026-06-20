@@ -1,0 +1,27 @@
+# Default batch synthesis configuration.
+# Run with:  python examples/run_batch.py configs/default.yaml
+
+n: 20
+output: out/batch_samples.jsonl
+score_threshold: 7.0
+max_refinement_rounds: 3
+# max_concurrent: 2   # omit to auto-detect from GPU VRAM (~1 per 8 GB)
+
+cs_types: [intra_sentential, inter_sentential, tag]
+cs_functions: [expressive, quotation, emphasis, clarification]
+cs_ratio_min: 0.2
+cs_ratio_max: 0.5
+
+language_pairs:
+  - [Cantonese, English]
+  - [Spanish, English]
+  - [Mandarin, English]
+
+age_min: 18
+age_max: 60
+genders: [male, female, non-binary]
+
+perspectives: [first-person, third-person]
+tenses: [past, present, future]
+topics: [technology, movies, food, work, family, travel]
+conversation_types: [casual chat, formal discussion, debate, storytelling]
