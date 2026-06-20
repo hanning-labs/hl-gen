@@ -93,6 +93,26 @@ class LocalClient:
         self._ensure_loaded()
         tokenizer, model = self._tokenizer, self._model
 
+        # If a JSON schema was requested, build a prefix_allowed_tokens_fn that
+        # constrains generation to tokens valid under that schema at every step.
+        json_schema = gen_kwargs.pop("_json_schema", None)
+        if json_schema is not None:
+            try:
+                from lmformatenforcer import JsonSchemaParser
+                from lmformatenforcer.integrations.transformers import (
+                    build_transformers_prefix_allowed_tokens_fn,
+                )
+                gen_kwargs["prefix_allowed_tokens_fn"] = (
+                    build_transformers_prefix_allowed_tokens_fn(
+                        tokenizer, JsonSchemaParser(json_schema)
+                    )
+                )
+            except ImportError as exc:
+                raise ImportError(
+                    "Constrained JSON decoding requires lm-format-enforcer. "
+                    'Install it with: pip install -e ".[local]"'
+                ) from exc
+
         chat: list[dict[str, str]] = []
         if system is not None:
             chat.append({"role": "system", "content": system})
@@ -149,7 +169,13 @@ class LocalClient:
                 "LocalClient for a different model."
             )
 
+        # json_schema is our own kwarg — intercept it before forwarding the rest
+        # to model.generate(). Pass it through to _run via a private key so it
+        # stays out of the HuggingFace generate() call signature.
+        json_schema = kwargs.pop("json_schema", None)
         gen_kwargs: dict[str, Any] = {"max_new_tokens": self.max_new_tokens, **kwargs}
+        if json_schema is not None:
+            gen_kwargs["_json_schema"] = json_schema
 
         async with self._lock:
             return await asyncio.to_thread(self._run, messages, system, gen_kwargs)

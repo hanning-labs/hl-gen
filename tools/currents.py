@@ -1,0 +1,84 @@
+"""Currents API tool provider.
+
+Fetches topical news articles from the Currents API to ground generation
+with real-world context. Requires a free API key from
+https://currentsapi.services/en/register — set the env var
+``CURRENTS_API_KEY`` or pass ``api_key`` directly.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any
+
+import requests
+
+from dotenv import dotenv_values, find_dotenv
+
+_env = dotenv_values(find_dotenv())
+
+from models import GenerationContext
+
+_BASE_URL = "https://api.currentsapi.services/v2/search"
+_BODY_TRUNCATE = 800  # chars per description kept in context
+
+
+class CurrentsTool:
+    """Fetches Currents API articles relevant to the request topic."""
+
+    name = "news"
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        max_articles: int = 30,
+        language: str = "en",
+    ) -> None:
+        self.api_key = api_key or _env.get("CURRENTS_API_KEY", "")
+        self.max_articles = max_articles
+        self.language = language
+
+    def _fetch_sync(self, topic: str) -> dict[str, Any]:
+        if not self.api_key:
+            return {"articles": [], "source": "currents", "error": "CURRENTS_API_KEY not set"}
+
+        try:
+            resp = requests.get(
+                _BASE_URL,
+                params={
+                    "keywords": topic,
+                    "language": self.language,
+                    "page_number": 1,
+                    "page_size": self.max_articles,
+                    "apiKey": self.api_key,
+                },
+                timeout=10,
+            )
+            data = resp.json()
+        except Exception as exc:
+            return {"articles": [], "source": "currents", "error": str(exc)}
+
+        if data.get("status") != "ok":
+            return {"articles": [], "source": "currents", "error": data.get("message", "unknown error")}
+        articles = []
+        for item in data.get("news", [])[: self.max_articles]:
+            description = (item.get("description") or "")[:_BODY_TRUNCATE]
+            articles.append({
+                "id": item.get("id", ""),
+                "title": item.get("title", ""),
+                "body": description,
+                "url": item.get("url", ""),
+                "date": item.get("published", ""),
+                "author": item.get("author", ""),
+                "language": item.get("language", ""),
+                "category": item.get("category", []),
+            })
+        return {
+            "articles": articles,
+            "source": "currents",
+            "page": data.get("page"),
+            "next_cursor": data.get("next_cursor"),
+        }
+
+    async def fetch(self, ctx: GenerationContext) -> dict[str, Any]:
+        return await asyncio.to_thread(self._fetch_sync, ctx.request.basic.topic)
