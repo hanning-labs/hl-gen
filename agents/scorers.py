@@ -4,7 +4,7 @@ Each scores one quality dimension on a 0–10 scale; the SummarizeAgent combines
 them into S_final. The per-dimension prompts are adapted from the SwitchLingua
 project (https://github.com/Shelton1013/SwitchLingua, ``core/prompt.py``): each
 agent uses its own role prompt and JSON schema (``fluency_score``/``errors``,
-``naturalness_score``/``observations``, ``ratio_score``/``computed_ratio``,
+``naturalness_score``/``observations``, ``l2_count``/``computed_score``,
 ``socio_cultural_score``/``issues``). The shared path in :class:`_DimensionScorer`
 fills the prompt's placeholders, parses the JSON reply, and maps the dimension's
 score field onto :class:`AgentScore` (rationale from the summary/notes fields).
@@ -159,16 +159,14 @@ class CSRatioAgent(ScorerAgent):
         super().__init__(llm, name=name, weight=weight, parse_retries=parse_retries)
 
     async def score(self, sample: CSSample) -> AgentScore:
-        from utils.cs_ratio import count_tokens, ratio_score
+        from utils.cs_ratio import count_tokens, l2_presence_score
 
         l1_lang = sample.request.character.first_language
         l2_lang = sample.request.character.second_language
-        target = sample.request.code_switching.ratio
 
         l1_count, l2_count = count_tokens(sample.text, l1_lang, l2_lang)
-        total = l1_count + l2_count
 
-        if total == 0:
+        if l1_count + l2_count == 0:
             log.warning("CSRatioAgent: no tokens detected in %r", sample.text[:40])
             return AgentScore(
                 agent=self.name,
@@ -176,16 +174,9 @@ class CSRatioAgent(ScorerAgent):
                 rationale=f"No tokens detected (L1={l1_lang}, L2={l2_lang})",
             )
 
-        actual = l2_count / total
-        computed_score = ratio_score(actual, target)
-
-        l1_pct = round(100 * l1_count / total)
-        l2_pct = 100 - l1_pct
-        rationale = (
-            f"{l1_pct}% : {l2_pct}% "
-            f"(L1={l1_count} tokens, L2={l2_count} tokens; target L2={target:.0%})"
-        )
-        log.debug("CSRatioAgent score=%.1f actual=%.2f target=%.2f", computed_score, actual, target)
+        computed_score = l2_presence_score(l2_count)
+        rationale = f"L1={l1_count} tokens, L2={l2_count} tokens"
+        log.debug("CSRatioAgent score=%.1f l2_count=%d", computed_score, l2_count)
         return AgentScore(agent=self.name, score=computed_score, rationale=rationale)
 
 

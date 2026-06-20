@@ -101,25 +101,12 @@ _LINGUA_NAMES: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 
-def ratio_score(actual: float, target: float) -> float:
-    """Score 0–10 via relative error against the target ratio.
+def l2_presence_score(l2_count: int) -> float:
+    """Score 0–10 based on the number of detected L2 tokens.
 
-    Error is normalised by min(target, 1-target) — the tightest achievable
-    deviation from the target — so a 10 % miss on a 10 % target (100 % relative
-    error) scores the same as a 50 % miss on a 50 % target.
-
-    actual == 0 always returns 0; identical values always return 10.
+    0 L2 tokens → 0.0, 1 L2 token → 5.0, 2+ L2 tokens → 10.0.
     """
-    if actual == 0.0:
-        return 0.0
-    if actual == target:
-        return 10.0
-    norm = min(target, 1.0 - target)
-    if norm == 0.0:
-        # target is 0 or 1: only a perfect match passes
-        return 10.0 if actual == target else 0.0
-    error = abs(actual - target)
-    return max(0.0, min(10.0, 10.0 * (1.0 - error / norm)))
+    return min(l2_count * 5.0, 10.0)
 
 
 # ---------------------------------------------------------------------------

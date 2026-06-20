@@ -1,7 +1,7 @@
 # Default batch synthesis configuration.
 # Run with:  python examples/run_batch.py configs/default.yaml
 
-n: 20
+n: 10
 output: out/batch_samples_bs_4_compile.jsonl
 seed: 36
 
@@ -13,8 +13,8 @@ client:
     max_batch_size: 4                   # set >1 to enable batching (e.g. 4 or 8)
     batch_timeout_sec: 0.02             # seconds to wait for a batch to fill
     compile_model: true                 # torch.compile — first batch slow, all subsequent faster
-score_threshold: 7.0
-max_refinement_rounds: 30
+score_threshold: 8.0
+max_refinement_rounds: 3
 # max_concurrent: 2   # omit to auto-detect from GPU VRAM (~1 per 8 GB)
 
 cs_types: [intra_sentential, inter_sentential, tag]
