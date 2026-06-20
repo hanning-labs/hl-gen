@@ -63,8 +63,18 @@ class SynthesisPipeline:
 
     async def _gather_tool_context(self, ctx: GenerationContext) -> dict:
         """Fetch context from every tool provider, keyed by provider name."""
-        results = await asyncio.gather(*(t.fetch(ctx) for t in self.tools))
-        return {provider.name: result for provider, result in zip(self.tools, results)}
+        results = await asyncio.gather(
+            *(t.fetch(ctx) for t in self.tools),
+            return_exceptions=True,
+        )
+        out = {}
+        for provider, result in zip(self.tools, results):
+            if isinstance(result, BaseException):
+                log.error("Tool %r raised during fetch: %s", provider.name, result)
+            else:
+                out[provider.name] = result
+        log.info("Tool context gathered  keys=%s", list(out.keys()))
+        return out
 
     async def run(self, request: SynthesisRequest) -> CSSample | None:
         """Synthesize one sample.

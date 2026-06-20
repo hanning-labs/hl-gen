@@ -9,13 +9,14 @@ https://currentsapi.services/en/register — set the env var
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 from typing import Any
 
 import requests
+from dotenv import load_dotenv
 
-from dotenv import dotenv_values, find_dotenv
-
-_env = dotenv_values(find_dotenv())
+log = logging.getLogger(__name__)
 
 from models import GenerationContext
 
@@ -34,14 +35,17 @@ class CurrentsTool:
         max_articles: int = 30,
         language: str = "en",
     ) -> None:
-        self.api_key = api_key or _env.get("CURRENTS_API_KEY", "")
+        load_dotenv()
+        self.api_key = api_key or os.environ.get("CURRENTS_API_KEY", "")
         self.max_articles = max_articles
         self.language = language
 
     def _fetch_sync(self, topic: str) -> dict[str, Any]:
         if not self.api_key:
+            log.warning("CURRENTS_API_KEY not set — skipping news fetch")
             return {"articles": [], "source": "currents", "error": "CURRENTS_API_KEY not set"}
 
+        log.info("Fetching Currents articles  topic=%r  max=%d", topic, self.max_articles)
         try:
             resp = requests.get(
                 _BASE_URL,
@@ -56,10 +60,14 @@ class CurrentsTool:
             )
             data = resp.json()
         except Exception as exc:
+            log.error("Currents request failed  topic=%r  error=%s", topic, exc)
             return {"articles": [], "source": "currents", "error": str(exc)}
 
         if data.get("status") != "ok":
-            return {"articles": [], "source": "currents", "error": data.get("message", "unknown error")}
+            msg = data.get("message", "unknown error")
+            log.error("Currents API error  topic=%r  message=%s", topic, msg)
+            return {"articles": [], "source": "currents", "error": msg}
+
         articles = []
         for item in data.get("news", [])[: self.max_articles]:
             description = (item.get("description") or "")[:_BODY_TRUNCATE]
@@ -73,6 +81,7 @@ class CurrentsTool:
                 "language": item.get("language", ""),
                 "category": item.get("category", []),
             })
+        log.info("Fetched %d articles  topic=%r", len(articles), topic)
         return {
             "articles": articles,
             "source": "currents",
