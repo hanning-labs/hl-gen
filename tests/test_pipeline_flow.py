@@ -66,6 +66,39 @@ client:
     assert cfg.client.max_new_tokens == 512
 
 
+def test_batch_config_seed_default_is_none() -> None:
+    cfg = BatchConfig.model_validate({"n": 1})
+    assert cfg.seed is None
+
+
+def test_batch_config_seed_from_yaml() -> None:
+    raw = yaml.safe_load("n: 5\nseed: 42")
+    cfg = BatchConfig.model_validate(raw)
+    assert cfg.seed == 42
+
+
+def test_seeded_runs_produce_same_requests() -> None:
+    from batch import sample_request
+    import random
+
+    cfg = BatchConfig.model_validate({"n": 10, "seed": 99})
+    rng_a = random.Random(cfg.seed)
+    rng_b = random.Random(cfg.seed)
+    requests_a = [sample_request(cfg, rng_a) for _ in range(cfg.n)]
+    requests_b = [sample_request(cfg, rng_b) for _ in range(cfg.n)]
+    assert [r.model_dump() for r in requests_a] == [r.model_dump() for r in requests_b]
+
+
+def test_unseeded_runs_differ() -> None:
+    from batch import sample_request
+    import random
+
+    cfg = BatchConfig.model_validate({"n": 10})
+    requests_a = [sample_request(cfg, random.Random()) for _ in range(cfg.n)]
+    requests_b = [sample_request(cfg, random.Random()) for _ in range(cfg.n)]
+    assert [r.model_dump() for r in requests_a] != [r.model_dump() for r in requests_b]
+
+
 def test_local_client_config_model_dump_matches_local_client_signature() -> None:
     """model_dump() keys must match LocalClient.__init__ parameter names exactly."""
     from llm.local import LocalClient

@@ -47,6 +47,7 @@ class BatchConfig(BaseModel):
     )
     output: str = "out/batch_samples.jsonl"
     client: LocalClientConfig = Field(default_factory=LocalClientConfig)
+    seed: int | None = Field(None, description="RNG seed for reproducible request sampling.")
     score_threshold: float = 7.0
     max_refinement_rounds: int = Field(3, ge=1)
 

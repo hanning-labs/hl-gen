@@ -50,7 +50,7 @@ async def main(config_path: str) -> None:
     store = FileSampleStore(config.output)
     pipeline = build_default_pipeline(llm, store)
 
-    results = await run_batch(config, pipeline)
+    results = await run_batch(config, pipeline, seed=config.seed)
 
     accepted = sum(1 for r in results if r is not None)
     print()

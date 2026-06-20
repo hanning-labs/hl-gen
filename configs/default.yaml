@@ -3,6 +3,7 @@
 
 n: 20
 output: out/batch_samples.jsonl
+seed: 36
 
 # client:
 #   model: Qwen/Qwen2.5-7B-Instruct   # any HF model id
