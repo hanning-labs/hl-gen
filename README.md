@@ -18,22 +18,6 @@ Input Parameters + Linguistic Principles + Tool context (Currents API news)
                        AcceptanceAgent ──► FileSampleStore (JSONL)
 ```
 
-## Diagram → code
-
-| Framework element            | Code                                                    |
-| ---------------------------- | ------------------------------------------------------- |
-| Input Parameters             | `config.py` (`SynthesisRequest` + sub-specs)            |
-| Linguistic Principles        | `principles.py` (`LinguisticPrinciples`)                |
-| Tool Integration             | `tools/currents.py` (`CurrentsTool`) + `tools/social.py` |
-| GenerationAgent (Generator)  | `agents/generation.py`                                  |
-| Fluency/Naturalness/CSRatio/SocialCulture (Scorers) | `agents/scorers.py`     |
-| SummarizeAgent (Reducer)     | `agents/summarize.py`                                   |
-| RefinerAgent (Editor)        | `agents/refiner.py`                                     |
-| AcceptanceAgent (Sink)       | `agents/acceptance.py` → `storage/file_store.py`        |
-| The refinement loop          | `orchestrator.py` (`SynthesisPipeline.run`)             |
-| LLM backend                  | `llm/local.py` (`LocalClient` — Hugging Face transformers) |
-| Batch driver                 | `batch.py` (`BatchConfig`, `run_batch`)                 |
-
 ## Quick start
 
 ```bash

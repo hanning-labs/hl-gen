@@ -66,6 +66,34 @@ client:
     assert cfg.client.max_new_tokens == 512
 
 
+def test_count_existing_empty(tmp_path) -> None:
+    from batch import count_existing
+    assert count_existing(str(tmp_path / "out.jsonl")) == 0
+
+
+def test_count_existing_with_records(tmp_path) -> None:
+    import json
+    from batch import count_existing
+    out = tmp_path / "out.jsonl"
+    records = [{"id": str(i), "saved_at": "2026-01-01T00:00:00+00:00", "sample": {}, "report": {}} for i in range(5)]
+    out.write_text("\n".join(json.dumps(r) for r in records) + "\n")
+    assert count_existing(str(out)) == 5
+
+
+def test_resume_skips_already_done(tmp_path) -> None:
+    import json
+    from batch import count_existing, BatchConfig
+    out = tmp_path / "out.jsonl"
+    records = [{"id": str(i), "saved_at": "2026-01-01T00:00:00+00:00", "sample": {}, "report": {}} for i in range(3)]
+    out.write_text("\n".join(json.dumps(r) for r in records) + "\n")
+
+    cfg = BatchConfig.model_validate({"n": 10, "output": str(out)})
+    already_done = count_existing(cfg.output)
+    remaining = cfg.n - already_done
+    assert already_done == 3
+    assert remaining == 7
+
+
 def test_batch_config_seed_default_is_none() -> None:
     cfg = BatchConfig.model_validate({"n": 1})
     assert cfg.seed is None

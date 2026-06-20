@@ -27,6 +27,7 @@ from config import (
 )
 from models import CSSample
 from orchestrator import SynthesisPipeline
+from storage.file_store import FileSampleStore
 
 
 class LocalClientConfig(BaseModel):
@@ -118,6 +119,11 @@ def sample_request(config: BatchConfig, rng: random.Random) -> SynthesisRequest:
         score_threshold=config.score_threshold,
         max_refinement_rounds=config.max_refinement_rounds,
     )
+
+
+def count_existing(output: str) -> int:
+    """Return the number of accepted samples already written to ``output``."""
+    return len(FileSampleStore(output).read_all())
 
 
 async def run_batch(
