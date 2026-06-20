@@ -41,6 +41,7 @@ class LocalClientConfig(BaseModel):
     max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
     max_batch_size: int = Field(1, ge=1, description="Max requests per model.generate() call. Set >1 to enable batching.")
     batch_timeout_sec: float = Field(0.02, description="Max seconds to wait for a batch to fill before firing.")
+    compile_model: bool = Field(False, description="Compile the model with torch.compile for faster inference after warmup.")
 
 
 class BatchConfig(BaseModel):

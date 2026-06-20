@@ -77,6 +77,7 @@ class LocalClient:
         max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
         max_batch_size: int = 1,
         batch_timeout_sec: float = 0.02,
+        compile_model: bool = False,
     ) -> None:
         self.model = model
         self.device = device
@@ -84,6 +85,7 @@ class LocalClient:
         self.max_new_tokens = max_new_tokens
         self.max_batch_size = max_batch_size
         self.batch_timeout_sec = batch_timeout_sec
+        self.compile_model = compile_model
         self._tokenizer: Any = None
         self._model: Any = None
         self._queue: asyncio.Queue[_BatchItem | None] = asyncio.Queue()
@@ -101,13 +103,21 @@ class LocalClient:
                 'Install them with: pip install -e ".[local]"'
             ) from exc
 
-        log.info("Loading model %r (device=%s, dtype=%s)", self.model, self.device or "auto", self.dtype)
+        log.info(
+            "Loading model %r (device=%s, dtype=%s, compile=%s)",
+            self.model, self.device or "auto", self.dtype, self.compile_model,
+        )
         self._tokenizer = AutoTokenizer.from_pretrained(self.model)
         self._model = AutoModelForCausalLM.from_pretrained(
             self.model,
             torch_dtype=self.dtype,
             device_map=self.device or "auto",
         )
+
+        if self.compile_model:
+            import torch
+            log.info("Compiling model with torch.compile (first batch will be slow) ...")
+            self._model = torch.compile(self._model, mode="reduce-overhead")
 
     def _run_batch(self, items: list[_BatchItem]) -> list[LLMResponse]:
         """Blocking batched generation. Runs inside ``asyncio.to_thread``.

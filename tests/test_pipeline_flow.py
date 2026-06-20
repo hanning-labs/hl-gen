@@ -131,6 +131,12 @@ def test_local_client_config_batch_defaults() -> None:
     cfg = LocalClientConfig()
     assert cfg.max_batch_size == 1
     assert cfg.batch_timeout_sec == 0.02
+    assert cfg.compile_model is False
+
+
+def test_local_client_config_compile_from_yaml() -> None:
+    cfg = LocalClientConfig.model_validate(yaml.safe_load("compile_model: true"))
+    assert cfg.compile_model is True
 
 
 def test_local_client_config_batch_from_yaml() -> None:
