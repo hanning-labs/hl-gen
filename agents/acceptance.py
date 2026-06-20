@@ -17,7 +17,7 @@ class AcceptanceAgent(SinkAgent):
         super().__init__(llm, name=name)
         self.store = store
 
-    async def accept(self, sample: CSSample, report: ScoreReport) -> None:
+    async def accept(self, sample: CSSample, report: ScoreReport, tool_context: dict) -> None:
         cs = sample.request.code_switching
         ch = sample.request.character
         b = sample.request.basic
@@ -43,6 +43,7 @@ class AcceptanceAgent(SinkAgent):
                     "cs_function": cs.function,
                     "cs_ratio": cs.ratio,
                 },
+                "tool_context": tool_context,
             }
         )
 

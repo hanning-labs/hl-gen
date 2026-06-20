@@ -100,7 +100,7 @@ class SynthesisPipeline:
 
             if report.passed:
                 log.info("Sample accepted  topic=%r", topic)
-                await self.acceptor.accept(sample, report)
+                await self.acceptor.accept(sample, report, ctx.tool_context)
                 return sample
 
             log.info("Sample rejected — refining  topic=%r", topic)

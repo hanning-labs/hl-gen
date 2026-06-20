@@ -116,5 +116,5 @@ class SinkAgent(Agent):
     """Terminal agent: persists accepted samples and logs metadata."""
 
     @abstractmethod
-    async def accept(self, sample: CSSample, report: ScoreReport) -> None:
+    async def accept(self, sample: CSSample, report: ScoreReport, tool_context: dict) -> None:
         ...

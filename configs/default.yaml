@@ -14,7 +14,7 @@ client:
     batch_timeout_sec: 0.02             # seconds to wait for a batch to fill
     compile_model: true                 # torch.compile — first batch slow, all subsequent faster
 score_threshold: 7.0
-max_refinement_rounds: 3
+max_refinement_rounds: 30
 # max_concurrent: 2   # omit to auto-detect from GPU VRAM (~1 per 8 GB)
 
 cs_types: [intra_sentential, inter_sentential, tag]
