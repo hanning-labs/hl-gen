@@ -5,12 +5,16 @@ in-process via ``transformers``. The heavy dependencies (``transformers``,
 ``torch``, ``accelerate``) live behind the ``local`` optional dependency group
 and are imported lazily, so the package stays importable without them.
 
-``model.generate`` is blocking, and a single loaded model instance is not safe
-for concurrent generation. The orchestrator runs the scorer agents with
-``asyncio.gather``, so :meth:`complete` offloads generation to a worker thread
-(``asyncio.to_thread``) guarded by an :class:`asyncio.Lock`. Concurrent callers
-therefore serialize through the one loaded model — correct for a single model on
-a single device — while the event loop stays unblocked.
+``model.generate`` is blocking and unsafe for concurrent calls. Rather than
+serialising through a lock, :meth:`complete` enqueues each request as a
+:class:`_BatchItem` with an :class:`asyncio.Future` and returns immediately to
+the event loop. A background drain task collects up to ``max_batch_size``
+pending items (or fires after ``batch_timeout_sec``), runs one batched
+``model.generate()`` in a worker thread, then resolves every Future with its
+slice of the output.
+
+With ``max_batch_size=1`` (the default) the drain fires immediately on each
+item, giving identical behaviour to the old lock-based approach.
 """
 
 from __future__ import annotations
@@ -18,16 +22,23 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import Any
 
 from .base import LLMResponse, Message
 
 log = logging.getLogger(__name__)
 
-# Default local model. Override per instance; the 14B variant
-# ("Qwen/Qwen2.5-14B-Instruct") is a drop-in if you have the memory for it.
 DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 DEFAULT_MAX_NEW_TOKENS = 1024
+
+
+@dataclass
+class _BatchItem:
+    messages: list[Message]
+    system: str | None
+    gen_kwargs: dict[str, Any]
+    future: asyncio.Future
 
 
 class LocalClient:
@@ -48,6 +59,13 @@ class LocalClient:
         ``"float16"``, ``"bfloat16"``).
     max_new_tokens:
         Default generation length; override per call via ``complete(..., max_new_tokens=N)``.
+    max_batch_size:
+        Maximum number of requests to group into one ``model.generate()`` call.
+        ``1`` disables batching (default, safe for all hardware).
+    batch_timeout_sec:
+        How long the drain task waits for a batch to fill before firing with
+        whatever it has. Lower values reduce latency; higher values improve
+        batching efficiency under load.
     """
 
     def __init__(
@@ -57,14 +75,19 @@ class LocalClient:
         device: str | None = None,
         dtype: str = "auto",
         max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
+        max_batch_size: int = 1,
+        batch_timeout_sec: float = 0.02,
     ) -> None:
         self.model = model
         self.device = device
         self.dtype = dtype
         self.max_new_tokens = max_new_tokens
+        self.max_batch_size = max_batch_size
+        self.batch_timeout_sec = batch_timeout_sec
         self._tokenizer: Any = None
         self._model: Any = None
-        self._lock = asyncio.Lock()
+        self._queue: asyncio.Queue[_BatchItem | None] = asyncio.Queue()
+        self._drain_task: asyncio.Task | None = None
 
     def _ensure_loaded(self) -> None:
         """Load the tokenizer and model once. Blocking — call from a worker thread."""
@@ -86,31 +109,51 @@ class LocalClient:
             device_map=self.device or "auto",
         )
 
-    def _run(
-        self,
-        messages: list[Message],
-        system: str | None,
-        gen_kwargs: dict[str, Any],
-    ) -> LLMResponse:
-        """Blocking generation path. Runs inside ``asyncio.to_thread``."""
+    def _run_batch(self, items: list[_BatchItem]) -> list[LLMResponse]:
+        """Blocking batched generation. Runs inside ``asyncio.to_thread``.
+
+        Left-pads all prompts to the same length so ``model.generate`` receives
+        a single batch tensor. Per-item JSON schema constraints are supported via
+        a combined ``prefix_allowed_tokens_fn`` that routes by ``batch_id``.
+        """
         import torch
 
         self._ensure_loaded()
         tokenizer, model = self._tokenizer, self._model
 
-        # If a JSON schema was requested, build a prefix_allowed_tokens_fn that
-        # constrains generation to tokens valid under that schema at every step.
-        json_schema = gen_kwargs.pop("_json_schema", None)
-        if json_schema is not None:
+        # --- build per-item chat texts ---
+        texts: list[str] = []
+        for item in items:
+            chat: list[dict[str, str]] = []
+            if item.system is not None:
+                chat.append({"role": "system", "content": item.system})
+            chat.extend({"role": m.role, "content": m.content} for m in item.messages)
+            texts.append(
+                tokenizer.apply_chat_template(
+                    chat, add_generation_prompt=True, tokenize=False
+                )
+            )
+
+        # --- batch-tokenize with left-padding (required for decoder-only models) ---
+        orig_padding_side = tokenizer.padding_side
+        tokenizer.padding_side = "left"
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        inputs = tokenizer(texts, return_tensors="pt", padding=True).to(model.device)
+        tokenizer.padding_side = orig_padding_side
+
+        # --- merge gen_kwargs: use the first item's non-schema kwargs as the base ---
+        # All items in a batch share the same generation hyperparams; only
+        # _json_schema differs per item.
+        base_kwargs = {k: v for k, v in items[0].gen_kwargs.items() if k != "_json_schema"}
+
+        # --- build combined prefix_allowed_tokens_fn if any item has a schema ---
+        schemas = [item.gen_kwargs.get("_json_schema") for item in items]
+        if any(s is not None for s in schemas):
             try:
                 from lmformatenforcer import JsonSchemaParser
                 from lmformatenforcer.integrations.transformers import (
                     build_transformers_prefix_allowed_tokens_fn,
-                )
-                gen_kwargs["prefix_allowed_tokens_fn"] = (
-                    build_transformers_prefix_allowed_tokens_fn(
-                        tokenizer, JsonSchemaParser(json_schema)
-                    )
                 )
             except ImportError as exc:
                 raise ImportError(
@@ -118,52 +161,92 @@ class LocalClient:
                     'Install it with: pip install -e ".[local]"'
                 ) from exc
 
-        chat: list[dict[str, str]] = []
-        if system is not None:
-            chat.append({"role": "system", "content": system})
-        chat.extend({"role": m.role, "content": m.content} for m in messages)
+            vocab_size = tokenizer.vocab_size
+            per_item_fns = [
+                build_transformers_prefix_allowed_tokens_fn(tokenizer, JsonSchemaParser(s))
+                if s is not None else None
+                for s in schemas
+            ]
 
-        inputs = tokenizer.apply_chat_template(
-            chat,
-            add_generation_prompt=True,
-            return_tensors="pt",
-            return_dict=True,
-        ).to(model.device)
+            def combined_prefix_fn(batch_id: int, input_ids: torch.Tensor) -> list[int]:
+                fn = per_item_fns[batch_id]
+                if fn is None:
+                    return list(range(vocab_size))
+                return fn(batch_id, input_ids)
 
-        if gen_kwargs.get("pad_token_id") is None and tokenizer.pad_token_id is None:
-            gen_kwargs["pad_token_id"] = tokenizer.eos_token_id
+            base_kwargs["prefix_allowed_tokens_fn"] = combined_prefix_fn
 
         t0 = time.monotonic()
         try:
             with torch.inference_mode():
-                generated = model.generate(**inputs, **gen_kwargs)
+                generated = model.generate(**inputs, **base_kwargs)
         except torch.cuda.OutOfMemoryError:
             torch.cuda.empty_cache()
             log.warning("CUDA OOM — clearing cache and retrying once")
             try:
                 with torch.inference_mode():
-                    generated = model.generate(**inputs, **gen_kwargs)
+                    generated = model.generate(**inputs, **base_kwargs)
             except torch.cuda.OutOfMemoryError as exc:
                 raise RuntimeError(
                     "CUDA out of memory after cache clear. "
                     "Try a smaller model, reduce max_new_tokens, or use device='cpu'."
                 ) from exc
-        log.debug("generate() took %.2fs", time.monotonic() - t0)
+        log.debug("generate() batch=%d took %.2fs", len(items), time.monotonic() - t0)
 
-        prompt_len = inputs["input_ids"].shape[-1]
-        new_tokens = generated[0][prompt_len:]
-        text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+        # --- slice output per item (left-padding means new tokens start at the same offset) ---
+        max_prompt_len = inputs["input_ids"].shape[1]
+        responses: list[LLMResponse] = []
+        for i, item in enumerate(items):
+            prompt_tokens = int(inputs["attention_mask"][i].sum())
+            new_tokens = generated[i][max_prompt_len:]
+            text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+            responses.append(
+                LLMResponse(
+                    text=text,
+                    model=self.model,
+                    usage={
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": int(new_tokens.shape[-1]),
+                        "total_tokens": prompt_tokens + int(new_tokens.shape[-1]),
+                    },
+                    raw=None,
+                )
+            )
+        return responses
 
-        return LLMResponse(
-            text=text,
-            model=self.model,
-            usage={
-                "prompt_tokens": int(prompt_len),
-                "completion_tokens": int(new_tokens.shape[-1]),
-                "total_tokens": int(generated.shape[-1]),
-            },
-            raw=None,
-        )
+    async def _drain_loop(self) -> None:
+        """Background task: drain the request queue in batches."""
+        while True:
+            item = await self._queue.get()
+            if item is None:
+                break
+
+            batch = [item]
+            if self.max_batch_size > 1:
+                deadline = asyncio.get_event_loop().time() + self.batch_timeout_sec
+                while len(batch) < self.max_batch_size:
+                    remaining = deadline - asyncio.get_event_loop().time()
+                    if remaining <= 0:
+                        break
+                    try:
+                        nxt = await asyncio.wait_for(self._queue.get(), timeout=remaining)
+                        if nxt is None:
+                            await self._queue.put(None)
+                            break
+                        batch.append(nxt)
+                    except asyncio.TimeoutError:
+                        break
+
+            log.debug("Draining batch of %d request(s)", len(batch))
+            try:
+                responses = await asyncio.to_thread(self._run_batch, batch)
+                for it, resp in zip(batch, responses):
+                    if not it.future.done():
+                        it.future.set_result(resp)
+            except Exception as exc:
+                for it in batch:
+                    if not it.future.done():
+                        it.future.set_exception(exc)
 
     async def complete(
         self,
@@ -188,13 +271,15 @@ class LocalClient:
                 "LocalClient for a different model."
             )
 
-        # json_schema is our own kwarg — intercept it before forwarding the rest
-        # to model.generate(). Pass it through to _run via a private key so it
-        # stays out of the HuggingFace generate() call signature.
         json_schema = kwargs.pop("json_schema", None)
         gen_kwargs: dict[str, Any] = {"max_new_tokens": self.max_new_tokens, **kwargs}
         if json_schema is not None:
             gen_kwargs["_json_schema"] = json_schema
 
-        async with self._lock:
-            return await asyncio.to_thread(self._run, messages, system, gen_kwargs)
+        if self._drain_task is None or self._drain_task.done():
+            self._drain_task = asyncio.create_task(self._drain_loop())
+
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[LLMResponse] = loop.create_future()
+        await self._queue.put(_BatchItem(messages, system, gen_kwargs, future))
+        return await future

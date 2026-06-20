@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import time
+from dataclasses import dataclass, field
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -37,6 +39,8 @@ class LocalClientConfig(BaseModel):
     device: str | None = None
     dtype: str = "auto"
     max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
+    max_batch_size: int = Field(1, ge=1, description="Max requests per model.generate() call. Set >1 to enable batching.")
+    batch_timeout_sec: float = Field(0.02, description="Max seconds to wait for a batch to fill before firing.")
 
 
 class BatchConfig(BaseModel):
@@ -121,6 +125,15 @@ def sample_request(config: BatchConfig, rng: random.Random) -> SynthesisRequest:
     )
 
 
+@dataclass
+class BatchRun:
+    """Results and timing data returned by ``run_batch``."""
+
+    results: list[CSSample | None]
+    request_timings_sec: list[float]
+    wall_sec: float
+
+
 def count_existing(output: str) -> int:
     """Return the number of accepted samples already written to ``output``."""
     return len(FileSampleStore(output).read_all())
@@ -131,8 +144,8 @@ async def run_batch(
     pipeline: SynthesisPipeline,
     *,
     seed: int | None = None,
-) -> list[CSSample | None]:
-    """Run ``config.n`` synthesis requests concurrently and return their results.
+) -> BatchRun:
+    """Run ``config.n`` synthesis requests concurrently and return a :class:`BatchRun`.
 
     Concurrency is bounded by ``config.max_concurrent`` (or ``default_max_concurrent()``
     if unset). ``LocalClient._lock`` serializes actual GPU inference, so the semaphore
@@ -142,15 +155,21 @@ async def run_batch(
     sem = asyncio.Semaphore(n_jobs)
     rng = random.Random(seed)
     completed = 0
+    timings: list[float] = []
 
     async def _one(i: int) -> CSSample | None:
         nonlocal completed
+        t0 = time.monotonic()
         async with sem:
             req = sample_request(config, rng)
             result = await pipeline.run(req)
+            elapsed = time.monotonic() - t0
+            timings.append(elapsed)
             completed += 1
             status = "accepted" if result is not None else "failed"
-            log.info("[%d/%d] %s  topic=%r  L1=%s", completed, config.n, status, req.basic.topic, req.character.first_language)
+            log.info("[%d/%d] %s  topic=%r  L1=%s  elapsed=%.1fs", completed, config.n, status, req.basic.topic, req.character.first_language, elapsed)
             return result
 
-    return list(await asyncio.gather(*[_one(i) for i in range(config.n)]))
+    t_start = time.monotonic()
+    results = list(await asyncio.gather(*[_one(i) for i in range(config.n)]))
+    return BatchRun(results=results, request_timings_sec=timings, wall_sec=time.monotonic() - t_start)

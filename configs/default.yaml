@@ -2,14 +2,16 @@
 # Run with:  python examples/run_batch.py configs/default.yaml
 
 n: 20
-output: out/batch_samples.jsonl
+output: out/batch_samples_bs_4.jsonl
 seed: 36
 
-# client:
-#   model: Qwen/Qwen2.5-7B-Instruct   # any HF model id
-#   device: null                        # null → auto (cuda/mps/cpu)
-#   dtype: auto                         # auto | float16 | bfloat16
-#   max_new_tokens: 1024
+client:
+    model: Qwen/Qwen2.5-7B-Instruct   # any HF model id
+    device: cuda                        # null → auto (cuda/mps/cpu)
+    dtype: bfloat16                         # auto | float16 | bfloat16
+    max_new_tokens: 1024
+    max_batch_size: 4                   # set >1 to enable batching (e.g. 4 or 8)
+    batch_timeout_sec: 0.02             # seconds to wait for a batch to fill
 score_threshold: 7.0
 max_refinement_rounds: 3
 # max_concurrent: 2   # omit to auto-detect from GPU VRAM (~1 per 8 GB)

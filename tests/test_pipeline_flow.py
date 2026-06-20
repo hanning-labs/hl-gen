@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 import yaml
 
-from batch import BatchConfig, LocalClientConfig
+from batch import BatchConfig, BatchRun, LocalClientConfig, run_batch
 from llm.local import DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL as LOCAL_DEFAULT_MODEL
 from config import (
     BasicSetting,
@@ -125,6 +125,19 @@ def test_unseeded_runs_differ() -> None:
     requests_a = [sample_request(cfg, random.Random()) for _ in range(cfg.n)]
     requests_b = [sample_request(cfg, random.Random()) for _ in range(cfg.n)]
     assert [r.model_dump() for r in requests_a] != [r.model_dump() for r in requests_b]
+
+
+def test_local_client_config_batch_defaults() -> None:
+    cfg = LocalClientConfig()
+    assert cfg.max_batch_size == 1
+    assert cfg.batch_timeout_sec == 0.02
+
+
+def test_local_client_config_batch_from_yaml() -> None:
+    raw = yaml.safe_load("max_batch_size: 4\nbatch_timeout_sec: 0.05")
+    cfg = LocalClientConfig.model_validate(raw)
+    assert cfg.max_batch_size == 4
+    assert cfg.batch_timeout_sec == 0.05
 
 
 def test_local_client_config_model_dump_matches_local_client_signature() -> None:
@@ -253,3 +266,24 @@ async def test_exhausts_rounds_returns_none() -> None:
     assert gen.calls == 2
     assert refiner.calls == 2
     assert sink.saved == []
+
+
+@pytest.mark.asyncio
+async def test_run_batch_returns_batch_run() -> None:
+    pipe, _, _, _ = build(ConstantScorer(9.0))
+    cfg = BatchConfig.model_validate({"n": 3, "max_concurrent": 3})
+    result = await run_batch(cfg, pipe, seed=0)
+    assert isinstance(result, BatchRun)
+    assert len(result.results) == 3
+    assert len(result.request_timings_sec) == 3
+    assert all(t >= 0 for t in result.request_timings_sec)
+    assert result.wall_sec >= 0
+
+
+@pytest.mark.asyncio
+async def test_run_batch_timings_populated_for_rejected() -> None:
+    pipe, _, _, _ = build(ConstantScorer(1.0))
+    cfg = BatchConfig.model_validate({"n": 2, "max_concurrent": 2})
+    result = await run_batch(cfg, pipe, seed=0)
+    assert all(r is None for r in result.results)
+    assert len(result.request_timings_sec) == 2
