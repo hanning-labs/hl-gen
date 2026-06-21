@@ -109,7 +109,7 @@ _LANGUAGE_TO_ISO: dict[str, str] = {
 class CurrentsTool:
     """Fetches Currents API articles relevant to the request topic."""
 
-    name = "news"
+    name = "currents_api"
 
     def __init__(
         self,

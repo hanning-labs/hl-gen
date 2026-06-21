@@ -33,7 +33,6 @@ genders: [male, female, non-binary]
 
 perspectives: [first-person, third-person]
 tenses: [past, present, future]
-topics: [technology, movies, food, work, family, travel]
 conversation_types: [casual chat, formal discussion, debate, storytelling]
 
 categories:

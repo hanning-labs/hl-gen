@@ -80,9 +80,6 @@ class BatchConfig(BaseModel):
     # basic ranges
     perspectives: list[str] = Field(default_factory=lambda: ["first-person", "third-person"])
     tenses: list[str] = Field(default_factory=lambda: ["past", "present", "future"])
-    topics: list[str] = Field(
-        default_factory=lambda: ["technology", "movies", "food", "work", "family", "travel"]
-    )
     conversation_types: list[str] = Field(
         default_factory=lambda: ["casual chat", "formal discussion", "debate", "storytelling"]
     )
@@ -129,7 +126,7 @@ def sample_request(config: BatchConfig, rng: random.Random) -> SynthesisRequest:
         basic=BasicSetting(
             perspective=rng.choice(config.perspectives),
             tense=rng.choice(config.tenses),
-            topic=rng.choice(config.topics),
+            topic=rng.choice(config.categories),
             conversation_type=rng.choice(config.conversation_types),
         ),
         score_threshold=config.score_threshold,
