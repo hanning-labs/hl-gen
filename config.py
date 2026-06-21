@@ -12,9 +12,6 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from principles import LinguisticPrinciples
-
-
 class CodeSwitchType(str, Enum):
     """Structural category of the code switch."""
 
@@ -62,7 +59,6 @@ class SynthesisRequest(BaseModel):
     code_switching: CodeSwitchingSpec
     character: CharacterSetting
     basic: BasicSetting
-    principles: LinguisticPrinciples = Field(default_factory=LinguisticPrinciples)
     score_threshold: float = Field(
         8.0, description="S_final must meet or exceed this for the sample to be accepted."
     )
