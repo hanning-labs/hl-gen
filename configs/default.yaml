@@ -2,7 +2,7 @@
 # Run with:  python examples/run_batch.py configs/default.yaml
 
 n: 10
-output: out/batch_samples_bs_4_compile.jsonl
+output: out/batch_samples_article_selector.jsonl
 seed: 36
 
 client:
@@ -35,3 +35,23 @@ perspectives: [first-person, third-person]
 tenses: [past, present, future]
 topics: [technology, movies, food, work, family, travel]
 conversation_types: [casual chat, formal discussion, debate, storytelling]
+
+categories:
+  - general
+  - society
+  - science_technology
+  - politics_government
+  - economy_business_finance
+  - arts_culture_entertainment
+  - lifestyle_leisure
+  - human_interest
+  - sport
+  - crime_law_justice
+  - education
+  - environment
+  - labour
+  - health
+  - automotive
+  - real_estate
+
+news_types: [news, articles, discussion]

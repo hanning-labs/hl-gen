@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import random
 from typing import Any
 
 import requests
@@ -23,6 +24,15 @@ from models import GenerationContext
 _BASE_URL = "https://api.currentsapi.services/v2/search"
 _BODY_TRUNCATE = 800  # chars per description kept in context
 
+
+_CONTENT_TYPE = {"news": 1, "articles": 2, "discussion": 3}
+
+_ALL_CATEGORIES = [
+    "general", "society", "science_technology", "politics_government",
+    "economy_business_finance", "arts_culture_entertainment", "lifestyle_leisure",
+    "human_interest", "sport", "crime_law_justice", "education",
+    "environment", "labour", "health", "automotive", "real_estate",
+]
 
 # ISO 639-1 codes for the Currents API language filter.
 # Varieties that share a writing system (e.g. Cantonese / Mandarin) map to the
@@ -106,28 +116,46 @@ class CurrentsTool:
         api_key: str | None = None,
         max_articles: int = 30,
         language: str = "en",
+        categories: list[str] | None = None,
+        news_types: list[str] | None = None,
     ) -> None:
         load_dotenv()
         self.api_key = api_key or os.environ.get("CURRENTS_API_KEY", "")
         self.max_articles = max_articles
         self.language = language
+        self.categories = categories or _ALL_CATEGORIES
+        self.news_types = news_types or list(_CONTENT_TYPE.keys())
 
-    def _fetch_sync(self, topic: str, language: str) -> dict[str, Any]:
+    def _fetch_sync(
+        self,
+        topic: str,
+        language: str,
+        category: str | None = None,
+        content_type: int | None = None,
+    ) -> dict[str, Any]:
         if not self.api_key:
             log.warning("CURRENTS_API_KEY not set — skipping news fetch")
             return {"articles": [], "source": "currents", "error": "CURRENTS_API_KEY not set"}
 
-        log.info("Fetching Currents articles  topic=%r  lang=%s  max=%d", topic, language, self.max_articles)
+        log.info(
+            "Fetching Currents articles  topic=%r  lang=%s  category=%s  type=%s  max=%d",
+            topic, language, category, content_type, self.max_articles,
+        )
+        params: dict[str, Any] = {
+            "keywords": topic,
+            "language": language,
+            "page_number": 1,
+            "page_size": self.max_articles,
+            "apiKey": self.api_key,
+        }
+        if category:
+            params["category"] = category
+        if content_type is not None:
+            params["type"] = content_type
         try:
             resp = requests.get(
                 _BASE_URL,
-                params={
-                    "keywords": topic,
-                    "language": language,
-                    "page_number": 1,
-                    "page_size": self.max_articles,
-                    "apiKey": self.api_key,
-                },
+                params=params,
                 timeout=10,
             )
             data = resp.json()
@@ -166,4 +194,8 @@ class CurrentsTool:
         language = _LANGUAGE_TO_ISO.get(l1.lower(), self.language)
         if language == self.language and l1.lower() not in _LANGUAGE_TO_ISO:
             log.warning("No ISO mapping for L1 %r — falling back to %r", l1, self.language)
-        return await asyncio.to_thread(self._fetch_sync, ctx.request.basic.topic, language)
+        category = random.choice(self.categories)
+        content_type = _CONTENT_TYPE[random.choice(self.news_types)]
+        return await asyncio.to_thread(
+            self._fetch_sync, ctx.request.basic.topic, language, category, content_type
+        )

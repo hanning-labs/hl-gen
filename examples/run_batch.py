@@ -104,7 +104,9 @@ async def main(config_path: str) -> None:
 
     llm = LocalClient(**config.client.model_dump())
     store = FileSampleStore(config.output)
-    pipeline = build_default_pipeline(llm, store, tools=[CurrentsTool()])
+    pipeline = build_default_pipeline(llm, store, tools=[
+        CurrentsTool(categories=config.categories, news_types=config.news_types)
+    ])
 
     effective = config.model_copy(update={"n": remaining})
     batch_run = await run_batch(effective, pipeline, seed=config.seed)

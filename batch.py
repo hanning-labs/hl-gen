@@ -87,6 +87,17 @@ class BatchConfig(BaseModel):
         default_factory=lambda: ["casual chat", "formal discussion", "debate", "storytelling"]
     )
 
+    # currents API filters
+    categories: list[str] = Field(
+        default_factory=lambda: [
+            "general", "society", "science_technology", "politics_government",
+            "economy_business_finance", "arts_culture_entertainment", "lifestyle_leisure",
+            "human_interest", "sport", "crime_law_justice", "education",
+            "environment", "labour", "health", "automotive", "real_estate",
+        ]
+    )
+    news_types: list[str] = Field(default_factory=lambda: ["news", "articles", "discussion"])
+
 
 def default_max_concurrent() -> int:
     """Estimate max concurrent pipelines from available GPU VRAM (~1 per 8 GB)."""
