@@ -1,9 +1,4 @@
-"""Tool integration interface (MCP-style) + custom-hook extension point.
-
-The framework's "Tool Integration" block lets generation draw on external
-context (news, social media, …). Each source is a :class:`ToolProvider`,
-modeled on MCP tools; user extensions plug in as :class:`CustomHook`s.
-"""
+"""Tool integration interface for external context providers."""
 
 from __future__ import annotations
 
@@ -26,16 +21,3 @@ class ToolProvider(Protocol):
     async def fetch(self, ctx: GenerationContext) -> dict[str, Any]:
         ...
 
-
-@runtime_checkable
-class CustomHook(Protocol):
-    """User extension point (the "Custom Hooks" block).
-
-    A hook receives the generation context and returns a (possibly enriched)
-    context. Concrete hook points around the loop are defined in a later pass.
-    """
-
-    name: str
-
-    async def __call__(self, ctx: GenerationContext) -> GenerationContext:
-        ...
