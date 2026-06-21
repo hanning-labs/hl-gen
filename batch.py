@@ -152,6 +152,7 @@ async def run_batch(
     config: BatchConfig,
     pipeline: SynthesisPipeline,
     *,
+    sample_fn=None,
     seed: int | None = None,
 ) -> BatchRun:
     """Run ``config.n`` synthesis requests concurrently and return a :class:`BatchRun`.
@@ -160,6 +161,7 @@ async def run_batch(
     if unset). ``LocalClient._lock`` serializes actual GPU inference, so the semaphore
     only limits how many pipelines are in-flight at once.
     """
+    _sample_fn = sample_fn if sample_fn is not None else sample_request
     n_jobs = config.max_concurrent or default_max_concurrent()
     sem = asyncio.Semaphore(n_jobs)
     rng = random.Random(seed)
@@ -170,13 +172,13 @@ async def run_batch(
         nonlocal completed
         t0 = time.monotonic()
         async with sem:
-            req = sample_request(config, rng)
+            req = _sample_fn(config, rng)
             result = await pipeline.run(req)
             elapsed = time.monotonic() - t0
             timings.append(elapsed)
             completed += 1
             status = "accepted" if result is not None else "failed"
-            log.info("[%d/%d] %s  topic=%r  L1=%s  elapsed=%.1fs", completed, config.n, status, req.basic.topic, req.character.first_language, elapsed)
+            log.info("[%d/%d] %s  topic=%r  elapsed=%.1fs", completed, config.n, status, req.topic, elapsed)
             return result
 
     t_start = time.monotonic()

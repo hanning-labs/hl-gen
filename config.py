@@ -65,3 +65,7 @@ class SynthesisRequest(BaseModel):
     max_refinement_rounds: int = Field(
         3, ge=1, description="Generate→refine attempts before the run gives up."
     )
+
+    @property
+    def topic(self) -> str:
+        return self.basic.topic

@@ -190,12 +190,13 @@ class CurrentsTool:
         }
 
     async def fetch(self, ctx: GenerationContext) -> dict[str, Any]:
-        l1 = ctx.request.character.first_language
+        character = getattr(ctx.request, "character", None)
+        l1 = character.first_language if character else "english"
         language = _LANGUAGE_TO_ISO.get(l1.lower(), self.language)
         if language == self.language and l1.lower() not in _LANGUAGE_TO_ISO:
             log.warning("No ISO mapping for L1 %r — falling back to %r", l1, self.language)
         category = random.choice(self.categories)
         content_type = _CONTENT_TYPE[random.choice(self.news_types)]
         return await asyncio.to_thread(
-            self._fetch_sync, ctx.request.basic.topic, language, category, content_type
+            self._fetch_sync, ctx.request.topic, language, category, content_type
         )

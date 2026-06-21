@@ -35,7 +35,6 @@ from agents.scorers import (
     SocialCultureAgent,
 )
 from agents.summarize import SummarizeAgent
-from config import SynthesisRequest
 from llm.base import LLMClient
 from models import CSSample, GenerationContext
 from storage.base import SampleStore
@@ -79,7 +78,7 @@ class SynthesisPipeline:
         log.info("Tool context gathered  keys=%s", list(out.keys()))
         return out
 
-    async def run(self, request: SynthesisRequest) -> CSSample | None:
+    async def run(self, request) -> CSSample | None:
         """Synthesize one sample.
 
         Returns the accepted :class:`CSSample`, or ``None`` if no attempt
@@ -90,7 +89,7 @@ class SynthesisPipeline:
 
         await self.article_selector.select(ctx)
 
-        topic = request.basic.topic
+        topic = request.topic
         for round_num in range(1, request.max_refinement_rounds + 1):
             log.info("Round %d/%d  topic=%r", round_num, request.max_refinement_rounds, topic)
             sample = await self.generator.generate(ctx)
@@ -135,4 +134,33 @@ def build_default_pipeline(
         acceptor=AcceptanceAgent(llm, store),
         tools=tools,
         article_selector=ArticleSelectorAgent(llm),
+    )
+
+
+def build_topics_pipeline(
+    llm: LLMClient,
+    store: SampleStore,
+    *,
+    tools: list[ToolProvider] | None = None,
+) -> SynthesisPipeline:
+    """Assemble the topics pipeline agents (English-only, news-grounded)."""
+    from agents.topics.generation import TopicGenerationAgent
+    from agents.topics.scorers import CoherenceAgent, FactualQualityAgent, StyleAdherenceAgent, TopicRelevanceAgent
+    from agents.topics.refiner import TopicRefinerAgent
+    from agents.topics.selector import TopicArticleSelectorAgent
+    from agents.topics.acceptance import TopicsAcceptanceAgent
+
+    return SynthesisPipeline(
+        generator=TopicGenerationAgent(llm),
+        scorers=[
+            TopicRelevanceAgent(llm),
+            CoherenceAgent(llm),
+            FactualQualityAgent(llm),
+            StyleAdherenceAgent(llm),
+        ],
+        summarizer=SummarizeAgent(llm),
+        refiner=TopicRefinerAgent(llm),
+        acceptor=TopicsAcceptanceAgent(llm, store),
+        tools=tools,
+        article_selector=TopicArticleSelectorAgent(llm),
     )

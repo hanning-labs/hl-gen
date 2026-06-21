@@ -7,16 +7,18 @@ generation context.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Any
 
-from config import SynthesisRequest
+from pydantic import BaseModel, Field
 
 
 class CSSample(BaseModel):
     """A candidate (or accepted) code-switched utterance."""
 
+    model_config = {"arbitrary_types_allowed": True}
+
     text: str = Field(..., description="The code-switched sentence in the matrix language.")
-    request: SynthesisRequest
+    request: Any
     metadata: dict = Field(default_factory=dict)
 
 
@@ -48,7 +50,7 @@ class RefinementFeedback(BaseModel):
 class GenerationContext(BaseModel):
     """Everything the generator needs for one attempt."""
 
-    request: SynthesisRequest
+    request: Any
     tool_context: dict = Field(
         default_factory=dict, description="External context gathered from tool providers."
     )
