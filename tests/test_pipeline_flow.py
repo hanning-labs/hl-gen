@@ -228,8 +228,13 @@ class RecordingSink(SinkAgent):
     def __init__(self) -> None:
         self.saved: list[tuple[CSSample, ScoreReport]] = []
 
-    async def accept(self, sample: CSSample, report: ScoreReport) -> None:
+    async def accept(self, sample: CSSample, report: ScoreReport, tool_context: dict) -> None:
         self.saved.append((sample, report))
+
+
+class NoopArticleSelector:
+    async def select(self, ctx: GenerationContext) -> None:
+        pass
 
 
 def build(scorer: ScorerAgent) -> tuple[SynthesisPipeline, MockGenerator, CountingRefiner, RecordingSink]:
@@ -240,6 +245,7 @@ def build(scorer: ScorerAgent) -> tuple[SynthesisPipeline, MockGenerator, Counti
         summarizer=MeanReducer(),
         refiner=refiner,
         acceptor=sink,
+        article_selector=NoopArticleSelector(),
     )
     return pipe, gen, refiner, sink
 
