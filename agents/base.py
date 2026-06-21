@@ -59,6 +59,7 @@ class Agent(ABC):
             response = await self.llm.complete(messages, system=system, **kwargs)
             try:
                 result = parse_json(response.text)
+                self._last_llm_response = response
                 return validate(result)
             except PromptParseError as exc:
                 last_exc = exc

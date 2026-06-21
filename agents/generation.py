@@ -187,6 +187,7 @@ class GenerationAgent(GeneratorAgent):
 
         data = await self._complete_with_retry(as_user(self._fill_prompt(ctx)), system=_SYSTEM, validate=_validate)
         instances = data["instances"]
+        llm_resp = getattr(self, "_last_llm_response", None)
 
         log.debug("%s generated %d instances for topic=%r", self.name, len(instances), ctx.request.basic.topic)
         first = instances[0]
@@ -205,5 +206,7 @@ class GenerationAgent(GeneratorAgent):
                 "refined": ctx.feedback is not None,
                 "topic": ctx.request.basic.topic,
                 "instances": instances,
+                "llm_model": llm_resp.model if llm_resp else None,
+                "llm_usage": llm_resp.usage if llm_resp else None,
             },
         )
