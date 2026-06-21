@@ -18,6 +18,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from agents.acceptance import AcceptanceAgent
+from agents.article_selector import ArticleSelectorAgent
 from agents.base import (
     EditorAgent,
     GeneratorAgent,
@@ -52,6 +53,7 @@ class SynthesisPipeline:
         summarizer: ReducerAgent,
         refiner: EditorAgent,
         acceptor: SinkAgent,
+        article_selector: ArticleSelectorAgent,
         tools: list[ToolProvider] | None = None,
     ) -> None:
         self.generator = generator
@@ -60,6 +62,7 @@ class SynthesisPipeline:
         self.refiner = refiner
         self.acceptor = acceptor
         self.tools = tools or []
+        self.article_selector = article_selector
 
     async def _gather_tool_context(self, ctx: GenerationContext) -> dict:
         """Fetch context from every tool provider, keyed by provider name."""
@@ -84,6 +87,8 @@ class SynthesisPipeline:
         """
         ctx = GenerationContext(request=request)
         ctx.tool_context = await self._gather_tool_context(ctx)
+
+        await self.article_selector.select(ctx)
 
         topic = request.basic.topic
         for round_num in range(1, request.max_refinement_rounds + 1):
@@ -129,4 +134,5 @@ def build_default_pipeline(
         refiner=RefinerAgent(llm),
         acceptor=AcceptanceAgent(llm, store),
         tools=tools,
+        article_selector=ArticleSelectorAgent(llm),
     )

@@ -1,6 +1,7 @@
 """The eight LinguaMaster agents and their role base classes."""
 
 from .acceptance import AcceptanceAgent
+from .article_selector import ArticleSelectorAgent
 from .base import (
     Agent,
     EditorAgent,
@@ -22,6 +23,8 @@ from .summarize import SummarizeAgent
 __all__ = [
     # role bases
     "Agent",
+    # pre-generation
+    "ArticleSelectorAgent",
     "GeneratorAgent",
     "ScorerAgent",
     "ReducerAgent",

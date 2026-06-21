@@ -108,6 +108,8 @@ OR an array of message pairs if multi-turn.
 
 8. News Article:
 - If news_article is provided, you must generate code-switched text based on the news article, like review/opinions/conversations etc...
+- If interaction_frame is provided, use it as the social context for how the persona engages with the article.
+- Interaction frame: {interaction_frame}
 - News Article: {news_article}
 
 9. The conversation type is {conversation_type}
@@ -154,7 +156,10 @@ class GenerationAgent(GeneratorAgent):
             "gender": ch.gender,
             "age": ch.age,
             "education_level": tc.get("education_level", "unspecified"),
-            "news_article": _format_news(tc.get("news")),
+            "news_article": _format_news({"articles": [tc["selected_article"]]})
+            if tc.get("selected_article")
+            else _format_news(tc.get("news")),
+            "interaction_frame": tc.get("interaction_frame", ""),
             "conversation_type": b.conversation_type,
             "topic": b.topic,
             "mcp_result": tc.get("mcp", ""),
