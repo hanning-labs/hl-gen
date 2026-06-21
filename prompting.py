@@ -19,7 +19,6 @@ __all__ = [
     "json_only_instruction",
     "as_user",
     "describe_feedback",
-    "extract_json",
     "parse_json",
 ]
 
