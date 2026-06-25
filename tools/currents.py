@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 from models import GenerationContext
 
 _BASE_URL = "https://api.currentsapi.services/v2/search"
-_BODY_TRUNCATE = 800  # chars per description kept in context
+_BODY_TRUNCATE = 2500  # chars per description kept in context
 
 
 _CONTENT_TYPE = {"news": 1, "articles": 2, "discussion": 3}

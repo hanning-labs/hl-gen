@@ -16,14 +16,13 @@ from agents.base import Agent
 log = logging.getLogger(__name__)
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
-_MAX_BODY_CHARS = 300
 
 
 def _format_articles(articles: list[dict]) -> str:
     lines = []
     for i, a in enumerate(articles):
         title = (a.get("title") or "").strip()
-        body = (a.get("body") or "").strip()[:_MAX_BODY_CHARS]
+        body = (a.get("body") or "").strip()
         lines.append(f"[{i}] {title}")
         if body:
             lines.append(f"    {body}")
@@ -58,7 +57,7 @@ class TopicArticleSelectorAgent(Agent):
             selected = articles[0]
             ctx.tool_context["selected_article"] = selected
             title = (selected.get("title") or "").strip()
-            body = (selected.get("body") or "").strip()[:_MAX_BODY_CHARS]
+            body = (selected.get("body") or "").strip()
             frame_prompt = (
                 f"Topic: {topic}\nStyle: {style}\n\n"
                 f"Article: {title}\n{body}\n\n"
