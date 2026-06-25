@@ -119,8 +119,6 @@ class CurrentsTool:
         language: str = "en",
         categories: list[str] | None = None,
         news_types: list[str] | None = None,
-        page_size_min: int = 10,
-        page_size_max: int = 30,
     ) -> None:
         load_dotenv()
         self.api_key = api_key or os.environ.get("CURRENTS_API_KEY", "")
@@ -128,8 +126,6 @@ class CurrentsTool:
         self.language = language
         self.categories = categories or _ALL_CATEGORIES
         self.news_types = news_types or list(_CONTENT_TYPE.keys())
-        self.page_size_min = page_size_min
-        self.page_size_max = page_size_max
 
     def _fetch_sync(
         self,
@@ -222,17 +218,11 @@ class CurrentsTool:
         # Humanize the keyword (slug → space-separated) so the API actually matches articles.
         keyword = topic_slug.replace("_", " ")
 
-        # Random pagination within the offset guardrail: (page_number-1)*page_size <= 1000
-        page_size = random.randint(self.page_size_min, self.page_size_max)
-        max_page = min(180, 1000 // page_size)
-        page_number = random.randint(1, max_page)
+        page_size = random.randint(min(5, self.max_articles), self.max_articles)
+        page_number = 1
 
-        # Date window: 14-day window (API max is 15), position shifts by age
-        # age 18 → ends today; age 78+ → ends 15 days ago
-        age = int(getattr(character, "age", 35) or 35)
-        end_offset = int(min(max(age - 18, 0), 60) / 60 * 15)
         now = datetime.now(timezone.utc)
-        end_dt = now - timedelta(days=end_offset)
+        end_dt = now - timedelta(days=random.randint(0, 60))
         start_dt = end_dt - timedelta(days=14)
         end_date = end_dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
         start_date = start_dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
