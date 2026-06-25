@@ -145,7 +145,7 @@ def build_topics_pipeline(
 ) -> SynthesisPipeline:
     """Assemble the topics pipeline agents (English-only, news-grounded)."""
     from agents.topics.generation import TopicGenerationAgent
-    from agents.topics.scorers import CoherenceAgent, FactualQualityAgent, StyleAdherenceAgent, TopicRelevanceAgent
+    from agents.topics.scorers import CoherenceAgent, DepthAgent, StyleAdherenceAgent, TopicRelevanceAgent
     from agents.topics.refiner import TopicRefinerAgent
     from agents.topics.selector import TopicArticleSelectorAgent
     from agents.topics.acceptance import TopicsAcceptanceAgent
@@ -155,7 +155,7 @@ def build_topics_pipeline(
         scorers=[
             TopicRelevanceAgent(llm),
             CoherenceAgent(llm),
-            FactualQualityAgent(llm),
+            DepthAgent(llm),
             StyleAdherenceAgent(llm),
         ],
         summarizer=SummarizeAgent(llm),

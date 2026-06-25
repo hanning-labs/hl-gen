@@ -194,6 +194,11 @@ class CurrentsTool:
                 "language": item.get("language", ""),
                 "category": item.get("category", []),
             })
+        # If deep pagination returned nothing, retry at page 1.
+        if not articles and page_number > 1:
+            log.info("Page %d returned 0 articles — retrying at page 1", page_number)
+            return self._fetch_sync(topic, language, category, content_type, 1, page_size, start_date, end_date)
+
         log.info("Fetched %d articles  topic=%r", len(articles), topic)
         return {
             "articles": articles,
@@ -208,8 +213,14 @@ class CurrentsTool:
         language = _LANGUAGE_TO_ISO.get(l1.lower(), self.language)
         if language == self.language and l1.lower() not in _LANGUAGE_TO_ISO:
             log.warning("No ISO mapping for L1 %r — falling back to %r", l1, self.language)
-        category = random.choice(self.categories)
+        # Use the request topic as category if it matches a known API category;
+        # otherwise fall back to a random category.
+        topic_slug = ctx.request.topic
+        category = topic_slug if topic_slug in _ALL_CATEGORIES else random.choice(self.categories)
         content_type = _CONTENT_TYPE[random.choice(self.news_types)]
+
+        # Humanize the keyword (slug → space-separated) so the API actually matches articles.
+        keyword = topic_slug.replace("_", " ")
 
         # Random pagination within the offset guardrail: (page_number-1)*page_size <= 1000
         page_size = random.randint(self.page_size_min, self.page_size_max)
@@ -227,6 +238,6 @@ class CurrentsTool:
         start_date = start_dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
         return await asyncio.to_thread(
-            self._fetch_sync, ctx.request.topic, language, category, content_type,
+            self._fetch_sync, keyword, language, category, content_type,
             page_number, page_size, start_date, end_date,
         )
