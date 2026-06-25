@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
 
 TOPIC_GENERATION_PROMPT = """\
-You are a content generation agent. Write either realistic conversational English text or high quality English text on the given topic, given the context you are provided. You always generate 1 sentence for the content.
+You are a content generation agent. Write either realistic English text on the given topic, given the context you are provided. You always generate 1 sentence for the content.
 
 Style: {style}
 Topic: {topic}
