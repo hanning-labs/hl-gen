@@ -20,7 +20,7 @@ from models import (
     RefinementFeedback,
     ScoreReport,
 )
-from prompting import PromptParseError, parse_json
+from prompting import PromptParseError, as_user, parse_json
 
 log = logging.getLogger(__name__)
 
@@ -119,3 +119,79 @@ class SinkAgent(Agent):
     @abstractmethod
     async def accept(self, sample: CSSample, report: ScoreReport, tool_context: dict) -> None:
         ...
+
+
+_SCORER_SYSTEM = "Respond with only the requested JSON object — no prose, no code fences. Use true/false for all criterion fields."
+_REFINER_SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
+
+
+class DimensionScorer(ScorerAgent):
+    """Shared scoring skeleton for boolean-criteria judges.
+
+    Subclasses set ``prompt``, ``criteria``, and implement ``_format_prompt``.
+    """
+
+    prompt: str = ""
+    criteria: tuple[str, ...] = ()
+
+    @abstractmethod
+    def _format_prompt(self, sample: CSSample) -> str: ...
+
+    async def score(self, sample: CSSample) -> AgentScore:
+        criteria = self.criteria
+        name = self.name
+
+        def _validate(data: object) -> dict:
+            if not isinstance(data, dict):
+                raise PromptParseError(f"{name}: expected a JSON object, got {type(data).__name__}")
+            for k in criteria:
+                if k not in data:
+                    raise PromptParseError(f"{name}: missing criterion {k!r} in model reply")
+            return data
+
+        data = await self._complete_with_retry(as_user(self._format_prompt(sample)), system=_SCORER_SYSTEM, validate=_validate)
+        passed = sum(bool(data[k]) for k in self.criteria)
+        score = passed / len(self.criteria) * 10
+        log.debug("%s score=%.1f (%d/%d)", self.name, score, passed, len(self.criteria))
+        return AgentScore(agent=self.name, score=score, rationale=data.get("notes", ""))
+
+
+class RefinerBase(EditorAgent):
+    """Shared refiner skeleton.
+
+    Subclasses implement ``_fill_prompt``; ``_summarize_scores`` and ``refine`` are provided.
+    """
+
+    @staticmethod
+    def _summarize_scores(report: ScoreReport) -> str:
+        lines = [
+            f"- {s.agent}: {s.score:.1f}/10 — {s.rationale or '(no notes)'}"
+            for s in sorted(report.scores, key=lambda s: s.score)
+        ]
+        return "\n".join(lines) if lines else "(no scorer feedback available)"
+
+    @abstractmethod
+    def _fill_prompt(self, sample: CSSample, report: ScoreReport) -> str: ...
+
+    async def refine(self, sample: CSSample, report: ScoreReport) -> RefinementFeedback:
+        name = self.name
+
+        def _validate(data: object) -> dict:
+            if not isinstance(data, dict):
+                raise PromptParseError(f"{name}: expected a JSON object, got {type(data).__name__}")
+            return data
+
+        data = await self._complete_with_retry(as_user(self._fill_prompt(sample, report)), system=_REFINER_SYSTEM, validate=_validate)
+
+        failures = data.get("failures") or []
+        if isinstance(failures, str):
+            failures = [failures]
+        elif not isinstance(failures, list):
+            failures = [str(failures)]
+        failures = [str(f) for f in failures if f]
+
+        suggestions = data.get("suggestions") or ""
+        if not isinstance(suggestions, str):
+            suggestions = str(suggestions)
+
+        return RefinementFeedback(failures=failures, suggestions=suggestions)
