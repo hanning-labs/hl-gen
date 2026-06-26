@@ -4,9 +4,9 @@ Each scores one quality dimension on a 0–10 scale; the SummarizeAgent combines
 them into S_final. The per-dimension prompts are adapted from the SwitchLingua
 project (https://github.com/Shelton1013/SwitchLingua, ``core/prompt.py``): each
 agent defines a ``criteria`` tuple of boolean keys. The judge answers true/false
-per criterion; the score is ``passed/total * 10``. The shared path in
-:class:`_DimensionScorer` fills prompt placeholders, validates the reply, and
-maps onto :class:`AgentScore` (rationale from the ``notes`` field).
+per criterion; the score is ``passed/total * 10``. Shared scoring logic lives in
+:class:`~agents.base.DimensionScorer`; subclasses here only define prompts and
+``_format_prompt``.
 """
 
 from __future__ import annotations
@@ -14,12 +14,10 @@ from __future__ import annotations
 import logging
 
 from models import AgentScore, CSSample
-from prompting import PromptParseError, as_user, json_only_instruction
-from .base import ScorerAgent
+from prompting import json_only_instruction
+from .base import DimensionScorer, ScorerAgent
 
 log = logging.getLogger(__name__)
-
-_SYSTEM = "Respond with only the requested JSON object — no prose, no code fences. Use true/false for all criterion fields."
 
 
 # --- SwitchLingua evaluation prompts (verbatim role text + placeholders) ----- #
@@ -58,13 +56,8 @@ SOCIAL_CULTURAL_PROMPT = (
 )
 
 
-class _DimensionScorer(ScorerAgent):
-    """Shared scoring path for a SwitchLingua-style single-dimension judge."""
-
-    #: SwitchLingua role prompt; uses {data_generation_result} (and {cs_ratio}).
-    prompt: str = ""
-    #: Boolean criterion keys the model must answer true/false for.
-    criteria: tuple[str, ...] = ()
+class _CSDimensionScorer(DimensionScorer):
+    """CS-specific prompt formatter: injects {data_generation_result} and {cs_ratio}."""
 
     def _format_prompt(self, sample: CSSample) -> str:
         body = self.prompt.format(
@@ -74,26 +67,8 @@ class _DimensionScorer(ScorerAgent):
         shape = "{" + ", ".join(f'"{k}": true/false' for k in self.criteria) + ', "notes": "..."}'
         return f"{body}\n\n{json_only_instruction(shape)}"
 
-    async def score(self, sample: CSSample) -> AgentScore:
-        criteria = self.criteria
-        name = self.name
 
-        def _validate(data: object) -> dict:
-            if not isinstance(data, dict):
-                raise PromptParseError(f"{name}: expected a JSON object, got {type(data).__name__}")
-            for k in criteria:
-                if k not in data:
-                    raise PromptParseError(f"{name}: missing criterion {k!r} in model reply")
-            return data
-
-        data = await self._complete_with_retry(as_user(self._format_prompt(sample)), system=_SYSTEM, validate=_validate)
-        passed = sum(bool(data[k]) for k in self.criteria)
-        score = passed / len(self.criteria) * 10
-        log.debug("%s score=%.1f (%d/%d) for sample %r", self.name, score, passed, len(self.criteria), sample.text[:40])
-        return AgentScore(agent=self.name, score=score, rationale=data.get("notes", ""))
-
-
-class FluencyAgent(_DimensionScorer):
+class FluencyAgent(_CSDimensionScorer):
     """Verifies grammaticality and the absence of broken morphemes."""
 
     name = "FluencyAgent"
@@ -101,7 +76,7 @@ class FluencyAgent(_DimensionScorer):
     criteria = ("free_morpheme_ok", "equivalence_ok", "word_order_ok")
 
 
-class NaturalnessAgent(_DimensionScorer):
+class NaturalnessAgent(_CSDimensionScorer):
     """Estimates pragmatic plausibility from a bilingual speaker's perspective."""
 
     name = "NaturalnessAgent"
@@ -150,7 +125,7 @@ class CSRatioAgent(ScorerAgent):
         return AgentScore(agent=self.name, score=computed_score, rationale=rationale)
 
 
-class SocialCultureAgent(_DimensionScorer):
+class SocialCultureAgent(_CSDimensionScorer):
     """Validates register, borrowed lexicon, and cultural appropriateness."""
 
     name = "SocialCultureAgent"
