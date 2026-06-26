@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from agents.article_selector import _format_articles
+from agents.helpers import _format_articles
 from agents.base import Agent
 from models import GenerationContext
 from prompting import PromptParseError, as_user

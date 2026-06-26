@@ -1,6 +1,6 @@
 """Input Parameters for code-switching synthesis.
 
-Mirrors the "Input Parameters" block of the LinguaMaster framework: the
+Mirrors the "Input Parameters" block of the hl-gen framework: the
 code-switching spec, the speaker/character setting, and basic discourse
 settings, composed into a single :class:`SynthesisRequest` that drives the
 whole pipeline.

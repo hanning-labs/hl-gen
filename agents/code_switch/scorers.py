@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import logging
 
+from agents.base import DimensionScorer, ScorerAgent
 from models import AgentScore, CSSample
 from prompting import json_only_instruction
-from .base import DimensionScorer, ScorerAgent
 
 log = logging.getLogger(__name__)
 

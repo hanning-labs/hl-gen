@@ -15,9 +15,9 @@ import json
 import logging
 from typing import Any
 
+from agents.base import GeneratorAgent
 from models import CSSample, GenerationContext
 from prompting import PromptParseError, as_user, describe_feedback
-from .base import GeneratorAgent
 
 log = logging.getLogger(__name__)
 

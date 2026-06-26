@@ -11,25 +11,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from agents.base import Agent
+from agents.helpers import _format_articles
 from models import GenerationContext
 from prompting import PromptParseError, as_user
-from .base import Agent
 
 log = logging.getLogger(__name__)
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
-
-
-
-def _format_articles(articles: list[dict]) -> str:
-    lines = []
-    for i, a in enumerate(articles):
-        title = (a.get("title") or "").strip()
-        body = (a.get("body") or "").strip()
-        lines.append(f"[{i}] {title}")
-        if body:
-            lines.append(f"    {body}")
-    return "\n".join(lines)
 
 
 class ArticleSelectorAgent(Agent):

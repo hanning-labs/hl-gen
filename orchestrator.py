@@ -17,8 +17,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from agents.acceptance import AcceptanceAgent
-from agents.article_selector import ArticleSelectorAgent
+from agents import AcceptanceAgent, SummarizeAgent
 from agents.base import (
     Agent,
     EditorAgent,
@@ -27,15 +26,15 @@ from agents.base import (
     ScorerAgent,
     SinkAgent,
 )
-from agents.generation import GenerationAgent
-from agents.refiner import RefinerAgent
-from agents.scorers import (
+from agents.code_switch import (
+    ArticleSelectorAgent,
     CSRatioAgent,
     FluencyAgent,
+    GenerationAgent,
     NaturalnessAgent,
+    RefinerAgent,
     SocialCultureAgent,
 )
-from agents.summarize import SummarizeAgent
 from llm.base import LLMClient
 from models import CSSample, GenerationContext
 from storage.base import SampleStore

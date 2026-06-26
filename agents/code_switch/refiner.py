@@ -9,7 +9,7 @@ dimensions.
 **Deviation from SwitchLingua project.** Their refiner emits *refined text* directly. Our
 loop instead routes feedback back through the generator: ``EditorAgent.refine``
 returns :class:`~models.RefinementFeedback` (``failures`` +
-``suggestions``), which :class:`~agents.generation.GenerationAgent`
+``suggestions``), which :class:`~agents.code_switch.generation.GenerationAgent`
 already appends to its prompt on retry rounds (via ``describe_feedback``). So this
 refiner produces *actionable guidance*, not finished text — keeping a single
 generation path and one place that owns producing the sample.
@@ -17,9 +17,9 @@ generation path and one place that owns producing the sample.
 
 from __future__ import annotations
 
+from agents.base import RefinerBase
 from models import CSSample, ScoreReport
 from prompting import json_only_instruction
-from .base import RefinerBase
 
 # hl-gen REFINER_PROMPT, adapted: {summary} carries the scorers' rationales,
 # {data_generation_result} the failing text. Output is structured feedback (see the
