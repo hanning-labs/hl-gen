@@ -4,9 +4,11 @@ from .acceptance import AcceptanceAgent
 from .article_selector import ArticleSelectorAgent
 from .base import (
     Agent,
+    DimensionScorer,
     EditorAgent,
     GeneratorAgent,
     ReducerAgent,
+    RefinerBase,
     ScorerAgent,
     SinkAgent,
 )
@@ -23,6 +25,8 @@ from .summarize import SummarizeAgent
 __all__ = [
     # role bases
     "Agent",
+    "DimensionScorer",
+    "RefinerBase",
     # pre-generation
     "ArticleSelectorAgent",
     "GeneratorAgent",

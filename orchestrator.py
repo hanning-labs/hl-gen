@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 from agents.acceptance import AcceptanceAgent
 from agents.article_selector import ArticleSelectorAgent
 from agents.base import (
+    Agent,
     EditorAgent,
     GeneratorAgent,
     ReducerAgent,
@@ -52,7 +53,7 @@ class SynthesisPipeline:
         summarizer: ReducerAgent,
         refiner: EditorAgent,
         acceptor: SinkAgent,
-        article_selector: ArticleSelectorAgent,
+        article_selector: Agent,
         tools: list[ToolProvider] | None = None,
     ) -> None:
         self.generator = generator
@@ -148,7 +149,6 @@ def build_topics_pipeline(
     from agents.topics.scorers import CoherenceAgent, DepthAgent, StyleAdherenceAgent, TopicRelevanceAgent
     from agents.topics.refiner import TopicRefinerAgent
     from agents.topics.selector import TopicArticleSelectorAgent
-    from agents.topics.acceptance import TopicsAcceptanceAgent
 
     return SynthesisPipeline(
         generator=TopicGenerationAgent(llm),
@@ -160,7 +160,7 @@ def build_topics_pipeline(
         ],
         summarizer=SummarizeAgent(llm),
         refiner=TopicRefinerAgent(llm),
-        acceptor=TopicsAcceptanceAgent(llm, store),
+        acceptor=AcceptanceAgent(llm, store),
         tools=tools,
         article_selector=TopicArticleSelectorAgent(llm),
     )
