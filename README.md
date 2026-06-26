@@ -1,4 +1,4 @@
-# LinguaMaster — multi-pipeline text synthesis framework
+# hl-gen — multi-pipeline text synthesis framework
 
 A closed-loop, multi-agent framework that **generates, scores, and refines text** using local LLMs. Two pipelines ship out of the box:
 

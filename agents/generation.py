@@ -3,7 +3,7 @@
 The generation prompt is adapted from the SwitchLingua project
 (https://github.com/Shelton1013/SwitchLingua, ``core/prompt.py`` —
 ``DATA_GENERATION_PROMPT``). Placeholders are filled from our
-:class:`~config.SynthesisRequest`; fields SwitchLingua expects but we
+:class:`~config.SynthesisRequest`; fields SwitchLingua project expects but we
 don't model (``education_level``, ``news_article``, ``mcp_result``) are pulled
 from ``ctx.tool_context`` when present and otherwise left blank. On refinement
 rounds the prior attempt's feedback is appended so the loop can revise.
@@ -45,7 +45,7 @@ def _format_news(news_ctx: Any) -> str:
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
 
-# SwitchLingua DATA_GENERATION_PROMPT (role text + {placeholders}). Example-output
+# hl-gen DATA_GENERATION_PROMPT (role text + {placeholders}). Example-output
 # braces are single (not the doubled langchain form) since we fill by targeted
 # replacement, not str.format.
 DATA_GENERATION_PROMPT = """\

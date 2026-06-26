@@ -1,4 +1,4 @@
-"""SynthesisPipeline — the LinguaMaster generate / score / refine loop.
+"""SynthesisPipeline — the hl-gen generate / score / refine loop.
 
 This is the one place with real control flow (not a stub): it wires the eight
 framework agents and drives the closed loop —
@@ -121,7 +121,7 @@ def build_default_pipeline(
     *,
     tools: list[ToolProvider] | None = None,
 ) -> SynthesisPipeline:
-    """Assemble the eight standard LinguaMaster agents into a pipeline."""
+    """Assemble the eight standard hl-gen agents into a pipeline."""
     return SynthesisPipeline(
         generator=GenerationAgent(llm),
         scorers=[

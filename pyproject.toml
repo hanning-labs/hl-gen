@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "code-switch-data-synthesis"
+name = "hl-gen"
 version = "0.1.0"
-description = "LinguaMaster code-switching data synthesis framework (skeleton)."
+description = "hl-gen code-switching data synthesis framework (skeleton)."
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.6",

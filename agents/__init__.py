@@ -1,4 +1,4 @@
-"""The eight LinguaMaster agents and their role base classes."""
+"""The eight hl-gen agents and their role base classes."""
 
 from .acceptance import AcceptanceAgent
 from .article_selector import ArticleSelectorAgent

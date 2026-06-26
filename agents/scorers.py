@@ -20,7 +20,7 @@ from .base import DimensionScorer, ScorerAgent
 log = logging.getLogger(__name__)
 
 
-# --- SwitchLingua evaluation prompts (verbatim role text + placeholders) ----- #
+# --- hl-gen evaluation prompts (verbatim role text + placeholders) ----------- #
 
 FLUENCY_PROMPT = (
     "You are **FluencyAgent**. Evaluate the grammatical correctness and syntactic "

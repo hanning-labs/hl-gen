@@ -6,7 +6,7 @@ The refiner prompt is adapted from the SwitchLingua project
 judge's 0–10 score plus notes, lowest first) so the model focuses on the weakest
 dimensions.
 
-**Deviation from SwitchLingua.** Their refiner emits *refined text* directly. Our
+**Deviation from SwitchLingua project.** Their refiner emits *refined text* directly. Our
 loop instead routes feedback back through the generator: ``EditorAgent.refine``
 returns :class:`~models.RefinementFeedback` (``failures`` +
 ``suggestions``), which :class:`~agents.generation.GenerationAgent`
@@ -21,9 +21,9 @@ from models import CSSample, ScoreReport
 from prompting import json_only_instruction
 from .base import RefinerBase
 
-# SwitchLingua REFINER_PROMPT, adapted: {summary} carries the scorers' rationales,
+# hl-gen REFINER_PROMPT, adapted: {summary} carries the scorers' rationales,
 # {data_generation_result} the failing text. Output is structured feedback (see the
-# module docstring for why we diverge from SwitchLingua's direct-text refiner).
+# module docstring for why we diverge from SwitchLingua project's direct-text refiner).
 REFINER_PROMPT = """\
 You are **RefinerAgent**, the editor in a code-switched text generation loop. A
 previous attempt was judged on four dimensions (Fluency, Naturalness, CS-Ratio,
