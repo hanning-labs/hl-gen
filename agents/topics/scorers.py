@@ -8,20 +8,15 @@ from __future__ import annotations
 
 import logging
 
-from models import AgentScore, CSSample
-from prompting import PromptParseError, as_user, json_only_instruction
-from agents.base import ScorerAgent
+from models import CSSample
+from prompting import json_only_instruction
+from agents.base import DimensionScorer
 
 log = logging.getLogger(__name__)
 
-_SYSTEM = "Respond with only the requested JSON object — no prose, no code fences. Use true/false for all criterion fields."
 
-
-class _TopicDimensionScorer(ScorerAgent):
-    """Shared scoring path for a single-dimension topic judge."""
-
-    prompt: str = ""
-    criteria: tuple[str, ...] = ()
+class _TopicDimensionScorer(DimensionScorer):
+    """Topic-specific prompt formatter: injects {text}, {topic}, {style}."""
 
     def _format_prompt(self, sample: CSSample) -> str:
         body = self.prompt.format(
@@ -31,24 +26,6 @@ class _TopicDimensionScorer(ScorerAgent):
         )
         shape = "{" + ", ".join(f'"{k}": true/false' for k in self.criteria) + ', "notes": "..."}'
         return f"{body}\n\n{json_only_instruction(shape)}"
-
-    async def score(self, sample: CSSample) -> AgentScore:
-        criteria = self.criteria
-        name = self.name
-
-        def _validate(data: object) -> dict:
-            if not isinstance(data, dict):
-                raise PromptParseError(f"{name}: expected a JSON object, got {type(data).__name__}")
-            for k in criteria:
-                if k not in data:
-                    raise PromptParseError(f"{name}: missing criterion {k!r} in model reply")
-            return data
-
-        data = await self._complete_with_retry(as_user(self._format_prompt(sample)), system=_SYSTEM, validate=_validate)
-        passed = sum(bool(data[k]) for k in self.criteria)
-        score = passed / len(self.criteria) * 10
-        log.debug("%s score=%.1f (%d/%d) for topic=%r", self.name, score, passed, len(self.criteria), sample.request.topic)
-        return AgentScore(agent=self.name, score=score, rationale=data.get("notes", ""))
 
 
 RELEVANCE_PROMPT = (
