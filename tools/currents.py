@@ -222,8 +222,8 @@ class CurrentsTool:
         page_number = 1
 
         now = datetime.now(timezone.utc)
-        end_dt = now - timedelta(days=random.randint(0, 60))
-        start_dt = end_dt - timedelta(days=14)
+        end_dt = now - timedelta(days=random.randint(0, 22))
+        start_dt = end_dt - timedelta(days=7)
         end_date = end_dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
         start_date = start_dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 

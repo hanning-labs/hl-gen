@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from agents.base import Agent
+from agents.base import Agent, fill_template, load_guide
 from agents.helpers import _format_articles
 from models import GenerationContext
 from prompting import PromptParseError, as_user
@@ -19,6 +19,8 @@ from prompting import PromptParseError, as_user
 log = logging.getLogger(__name__)
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
+
+_ARTICLE_SELECTOR_PROMPT = load_guide("prompts/article_selector.md")
 
 
 class ArticleSelectorAgent(Agent):
@@ -37,15 +39,15 @@ class ArticleSelectorAgent(Agent):
         ch = ctx.request.character
         b = ctx.request.basic
 
-        prompt = (
-            "You are selecting the most relevant news article for a code-switching data generation task.\n\n"
-            f"Persona: {ch.age}-year-old {ch.gender}, speaks {ch.first_language} and {ch.second_language}\n"
-            f"Topic: {b.topic}\n"
-            f"Conversation type: {b.conversation_type}\n\n"
-            f"Articles:\n{_format_articles(articles)}\n\n"
-            "Pick the article this persona would most naturally react to or discuss.\n"
-            "Also propose a brief, natural social frame (1 sentence) describing HOW they engage with it "
-            'Respond with: {"article_index": <integer>, "frame": "<one sentence>"}'
+        prompt = fill_template(
+            _ARTICLE_SELECTOR_PROMPT,
+            age=ch.age,
+            gender=ch.gender,
+            first_language=ch.first_language,
+            second_language=ch.second_language,
+            topic=b.topic,
+            conversation_type=b.conversation_type,
+            articles=_format_articles(articles),
         )
 
         def _validate(data: Any) -> dict:

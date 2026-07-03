@@ -1,6 +1,6 @@
 """Scorer agents for the English topics pipeline.
 
-Four dimensions: topic relevance, coherence, factual quality, style adherence.
+Four dimensions: topic relevance, coherence, human-likeness, style adherence.
 All inherit _TopicDimensionScorer which omits the CS-specific cs_ratio placeholder.
 """
 
@@ -10,9 +10,14 @@ import logging
 
 from models import CSSample
 from prompting import json_only_instruction
-from agents.base import DimensionScorer
+from agents.base import DimensionScorer, _SCORER_SYSTEM, load_guide
 
 log = logging.getLogger(__name__)
+
+_HUMANIZER_GUIDE = load_guide("system/humanizer.md")
+_COHERENCE_GUIDE = load_guide("system/coherence.md")
+_STYLE_ADHERENCE_GUIDE = load_guide("system/style_adherence.md")
+_TOPIC_RELEVANCE_GUIDE = load_guide("system/topic_relevance.md")
 
 
 class _TopicDimensionScorer(DimensionScorer):
@@ -28,64 +33,35 @@ class _TopicDimensionScorer(DimensionScorer):
         return f"{body}\n\n{json_only_instruction(shape)}"
 
 
-RELEVANCE_PROMPT = (
-    "You are **TopicRelevanceAgent**. Evaluate whether the following text actually addresses the stated topic.\n\n"
-    "Topic: {topic}\n"
-    "Text: {text}\n\n"
-    "For each criterion below, answer true or false. Add a \"notes\" field with 1–2 sentences.\n"
-    "- addresses_topic: The text directly engages with the stated topic\n"
-    "- key_concepts_present: Key concepts of the topic are present\n"
-    "- stays_on_topic: The text stays on-topic throughout"
-)
-
-COHERENCE_PROMPT = (
-    "You are **CoherenceAgent**. Evaluate the logical structure and clarity of the following text.\n\n"
-    "Text: {text}\n\n"
-    "For each criterion below, answer true or false. Add a \"notes\" field with 1–2 sentences.\n"
-    "- logical_flow: Ideas flow logically from one to the next\n"
-    "- clear_transitions: Transitions are clear and the argument is easy to follow\n"
-    "- no_contradictions: Text is free of contradictions or unclear references"
-)
-
-DEPTH_PROMPT = (
-    "You are **DepthAgent**. Evaluate whether the following text develops its ideas "
-    "or stays at a surface level.\n\n"
-    "Text: {text}\n\n"
-    "For each criterion below, answer true or false. Add a \"notes\" field with 1–2 sentences.\n"
-    "- develops_ideas: Ideas are explored and developed, not just named or stated\n"
-    "- specific_details: Content includes specific details, examples, or supporting points\n"
-    "- avoids_obvious: Content goes beyond restating the obvious or the headline"
-)
-
-STYLE_PROMPT = (
-    "You are **StyleAdherenceAgent**. Evaluate whether the following text matches the requested style.\n\n"
-    "Requested style: {style}\n"
-    "Text: {text}\n\n"
-    "For each criterion below, answer true or false. Add a \"notes\" field with 1–2 sentences.\n"
-    "- structure_conforms: Text conforms to the structure of the requested style\n"
-    "- tone_appropriate: Tone and voice are appropriate for the style"
-)
+RELEVANCE_PROMPT = load_guide("prompts/topic_relevance.md")
+COHERENCE_PROMPT = load_guide("prompts/coherence.md")
+HUMAN_LIKENESS_PROMPT = load_guide("prompts/human_likeness.md")
+STYLE_PROMPT = load_guide("prompts/style_adherence.md")
 
 
 class TopicRelevanceAgent(_TopicDimensionScorer):
     name = "TopicRelevanceAgent"
     prompt = RELEVANCE_PROMPT
     criteria = ("addresses_topic", "key_concepts_present", "stays_on_topic")
+    system = f"{_TOPIC_RELEVANCE_GUIDE}\n\n{_SCORER_SYSTEM}"
 
 
 class CoherenceAgent(_TopicDimensionScorer):
     name = "CoherenceAgent"
     prompt = COHERENCE_PROMPT
     criteria = ("logical_flow", "clear_transitions", "no_contradictions")
+    system = f"{_COHERENCE_GUIDE}\n\n{_SCORER_SYSTEM}"
 
 
-class DepthAgent(_TopicDimensionScorer):
-    name = "DepthAgent"
-    prompt = DEPTH_PROMPT
-    criteria = ("develops_ideas", "specific_details", "avoids_obvious")
+class HumanLikenessAgent(_TopicDimensionScorer):
+    name = "HumanLikenessAgent"
+    prompt = HUMAN_LIKENESS_PROMPT
+    criteria = ("no_ai_vocab", "natural_rhythm", "no_chatbot_artifacts")
+    system = f"{_HUMANIZER_GUIDE}\n\n{_SCORER_SYSTEM}"
 
 
 class StyleAdherenceAgent(_TopicDimensionScorer):
     name = "StyleAdherenceAgent"
     prompt = STYLE_PROMPT
     criteria = ("structure_conforms", "tone_appropriate")
+    system = f"{_STYLE_ADHERENCE_GUIDE}\n\n{_SCORER_SYSTEM}"

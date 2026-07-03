@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Callable
 
 from llm.base import LLMClient, Message
@@ -23,6 +24,20 @@ from models import (
 from prompting import PromptParseError, as_user, parse_json
 
 log = logging.getLogger(__name__)
+
+_GUIDES_DIR = Path(__file__).resolve().parent / "guides"
+
+
+def load_guide(filename: str) -> str:
+    """Read a prompt/guide template from agents/guides/."""
+    return (_GUIDES_DIR / filename).read_text()
+
+
+def fill_template(template: str, **values: object) -> str:
+    """Substitute ``{key}`` placeholders by literal replacement, leaving other braces untouched."""
+    for key, value in values.items():
+        template = template.replace("{" + key + "}", str(value))
+    return template
 
 
 class Agent(ABC):
@@ -134,6 +149,9 @@ class DimensionScorer(ScorerAgent):
     prompt: str = ""
     criteria: tuple[str, ...] = ()
 
+    #: System prompt for the judging call; subclasses may override to add guidance.
+    system: str = _SCORER_SYSTEM
+
     @abstractmethod
     def _format_prompt(self, sample: CSSample) -> str: ...
 
@@ -149,7 +167,7 @@ class DimensionScorer(ScorerAgent):
                     raise PromptParseError(f"{name}: missing criterion {k!r} in model reply")
             return data
 
-        data = await self._complete_with_retry(as_user(self._format_prompt(sample)), system=_SCORER_SYSTEM, validate=_validate)
+        data = await self._complete_with_retry(as_user(self._format_prompt(sample)), system=self.system, validate=_validate)
         passed = sum(bool(data[k]) for k in self.criteria)
         score = passed / len(self.criteria) * 10
         log.debug("%s score=%.1f (%d/%d)", self.name, score, passed, len(self.criteria))

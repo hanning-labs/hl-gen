@@ -10,13 +10,16 @@ import logging
 from typing import Any
 
 from agents.helpers import _format_articles
-from agents.base import Agent
+from agents.base import Agent, fill_template, load_guide
 from models import GenerationContext
 from prompting import PromptParseError, as_user
 
 log = logging.getLogger(__name__)
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
+
+_SELECTOR_SINGLE_PROMPT = load_guide("prompts/topic_article_selector_single.md")
+_SELECTOR_MULTI_PROMPT = load_guide("prompts/topic_article_selector_multi.md")
 
 
 class TopicArticleSelectorAgent(Agent):
@@ -48,25 +51,14 @@ class TopicArticleSelectorAgent(Agent):
             ctx.tool_context["selected_article"] = selected
             title = (selected.get("title") or "").strip()
             body = (selected.get("body") or "").strip()
-            frame_prompt = (
-                f"Topic: {topic}\nStyle: {style}\n\n"
-                f"Article: {title}\n{body}\n\n"
-                "Propose a specific engagement frame (1 sentence) telling the generator exactly HOW "
-                f"to write a {style!r} piece using this article — the angle, approach, and what to focus on.\n"
-                'Respond with: {"frame": "<one sentence>"}'
+            frame_prompt = fill_template(
+                _SELECTOR_SINGLE_PROMPT, topic=topic, style=style, title=title, body=body
             )
             data = await self._complete_with_retry(as_user(frame_prompt), system=_SYSTEM, validate=_validate_frame)
             article_idx = 0
         else:
-            combined_prompt = (
-                "You are selecting the most relevant news article for a topic-focused text generation task.\n\n"
-                f"Topic: {topic}\n"
-                f"Requested style: {style}\n\n"
-                f"Articles:\n{_format_articles(articles)}\n\n"
-                "Pick the article most relevant to the topic and best suited for the requested style.\n"
-                "Also propose a specific engagement frame (1 sentence) that tells the generator exactly HOW to write "
-                f"a {style!r} piece using this article — the angle, approach, and what to focus on.\n"
-                'Respond with: {"article_index": <integer>, "frame": "<one sentence>"}'
+            combined_prompt = fill_template(
+                _SELECTOR_MULTI_PROMPT, topic=topic, style=style, articles=_format_articles(articles)
             )
 
             def _validate_combined(data: Any) -> dict:

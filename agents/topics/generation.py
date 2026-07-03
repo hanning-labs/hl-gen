@@ -7,24 +7,13 @@ from typing import Any
 
 from models import CSSample, GenerationContext
 from prompting import PromptParseError, as_user, describe_feedback
-from agents.base import GeneratorAgent
+from agents.base import GeneratorAgent, load_guide
 
 log = logging.getLogger(__name__)
 
 _SYSTEM = "Respond with only the requested JSON object — no prose, no code fences."
 
-TOPIC_GENERATION_PROMPT = """\
-You are a content generation agent. Write either realistic English text on the given topic, given the context you are provided. You always generate 1 sentence for the content.
-
-Style: {style}
-Topic: {topic}
-Tense: {tense}
-Perspective: {perspective}
-{news_block}
-Write in the requested style. The text must directly address the topic and read naturally.
-
-Output a single JSON object:
-{{"instances": ["<generated text>"]}}"""
+TOPIC_GENERATION_PROMPT = load_guide("prompts/topic_generation.md")
 
 
 def _format_article(tc: dict) -> str:

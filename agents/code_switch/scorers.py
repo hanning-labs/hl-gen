@@ -13,47 +13,16 @@ from __future__ import annotations
 
 import logging
 
-from agents.base import DimensionScorer, ScorerAgent
+from agents.base import DimensionScorer, ScorerAgent, _SCORER_SYSTEM, load_guide
 from models import AgentScore, CSSample
 from prompting import json_only_instruction
 
 log = logging.getLogger(__name__)
 
-
-# --- hl-gen evaluation prompts (verbatim role text + placeholders) ----------- #
-
-FLUENCY_PROMPT = (
-    "You are **FluencyAgent**. Evaluate the grammatical correctness and syntactic "
-    "coherence of the following code-switched text:\n\n"
-    "{data_generation_result}\n\n"
-    "For each criterion below, answer true or false. Add a \"notes\" field with 1–2 sentences.\n"
-    "- free_morpheme_ok: No switching between bound and free morphemes (Poplack 1980)\n"
-    "- equivalence_ok: Switches occur where syntactic structures align across languages\n"
-    "- word_order_ok: No unnatural mixing of word orders\n\n"
-    "Always answer in English in your report."
-)
-
-NATURALNESS_PROMPT = (
-    "You are **NaturalnessAgent**. Evaluate how natural and authentic the following "
-    "code-switched text sounds from a *bilingual speaker's perspective*:\n\n"
-    "{data_generation_result}\n\n"
-    "For each criterion below, answer true or false. Add a \"notes\" field with 1–2 sentences.\n"
-    "- intersentential_ok: Intersentential switching (between sentences) is natural\n"
-    "- intrasentential_ok: Intrasentential switching (within a sentence) sounds authentic\n"
-    "- bilingual_authentic: Overall sounds like a real bilingual speaker would say it\n\n"
-    "Always answer in English in your report."
-)
-
-SOCIAL_CULTURAL_PROMPT = (
-    "You are **SocioCulturalAgent**. Evaluate whether the following code-switched text "
-    "respects cultural norms and uses correct borrowed vocabulary:\n\n"
-    "{data_generation_result}\n\n"
-    "For each criterion below, answer true or false. Add a \"notes\" field with 1–2 sentences.\n"
-    '- borrowed_vocab_correct: Borrowed vocabulary is used correctly (e.g., Cantonese "士多啤梨" for strawberry)\n'
-    "- culturally_appropriate: Text respects cultural norms of both languages\n"
-    "- register_consistent: Register is consistent with the context\n\n"
-    "Always answer in English in your report."
-)
+FLUENCY_PROMPT = load_guide("prompts/fluency.md")
+NATURALNESS_PROMPT = load_guide("prompts/naturalness.md")
+SOCIAL_CULTURAL_PROMPT = load_guide("prompts/social_culture.md")
+_SOCIAL_CULTURE_GUIDE = load_guide("system/social_culture.md")
 
 
 class _CSDimensionScorer(DimensionScorer):
@@ -131,3 +100,4 @@ class SocialCultureAgent(_CSDimensionScorer):
     name = "SocialCultureAgent"
     prompt = SOCIAL_CULTURAL_PROMPT
     criteria = ("borrowed_vocab_correct", "culturally_appropriate", "register_consistent")
+    system = f"{_SOCIAL_CULTURE_GUIDE}\n\n{_SCORER_SYSTEM}"

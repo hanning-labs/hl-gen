@@ -28,6 +28,7 @@ from typing import Any
 from .base import LLMResponse, Message
 
 log = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 DEFAULT_MAX_NEW_TOKENS = 1024
@@ -140,7 +141,7 @@ class LocalClient:
             chat.extend({"role": m.role, "content": m.content} for m in item.messages)
             texts.append(
                 tokenizer.apply_chat_template(
-                    chat, add_generation_prompt=True, tokenize=False
+                    chat, add_generation_prompt=True, tokenize=False, enable_thinking=False
                 )
             )
 

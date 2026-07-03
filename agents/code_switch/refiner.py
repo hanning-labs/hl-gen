@@ -17,31 +17,14 @@ generation path and one place that owns producing the sample.
 
 from __future__ import annotations
 
-from agents.base import RefinerBase
+from agents.base import RefinerBase, load_guide
 from models import CSSample, ScoreReport
 from prompting import json_only_instruction
 
 # hl-gen REFINER_PROMPT, adapted: {summary} carries the scorers' rationales,
 # {data_generation_result} the failing text. Output is structured feedback (see the
 # module docstring for why we diverge from SwitchLingua project's direct-text refiner).
-REFINER_PROMPT = """\
-You are **RefinerAgent**, the editor in a code-switched text generation loop. A
-previous attempt was judged on four dimensions (Fluency, Naturalness, CS-Ratio,
-Socio-Cultural) and did not pass. Turn the judges' evaluations into concrete,
-actionable guidance the generator can use to revise the text on its next attempt.
-
-Code-switched text under review:
-{data_generation_result}
-
-Evaluator summary (each judge's score out of 10 and notes, weakest first):
-{summary}
-
-Produce a single JSON object:
-- "failures": an array of short strings, each naming one concrete problem to fix,
-  grounded in the lowest-scoring dimensions above.
-- "suggestions": a short paragraph of specific rewrite guidance — what to change
-  and how — so the next attempt scores higher while keeping the requested
-  languages, code-switching ratio, persona, and topic."""
+REFINER_PROMPT = load_guide("prompts/refiner_cs.md")
 
 _RESPONSE_SHAPE = '{"failures": ["..."], "suggestions": "..."}'
 
