@@ -28,6 +28,7 @@ class AgentScore(BaseModel):
     agent: str
     score: float = Field(..., ge=0.0, le=10.0)
     rationale: str = ""
+    reasoning: str | None = Field(None, description="Judge's chain-of-thought trace, if thinking was enabled.")
 
 
 class ScoreReport(BaseModel):

@@ -42,6 +42,11 @@ class LocalClientConfig(BaseModel):
     max_batch_size: int = Field(1, ge=1, description="Max requests per model.generate() call. Set >1 to enable batching.")
     batch_timeout_sec: float = Field(0.02, description="Max seconds to wait for a batch to fill before firing.")
     compile_model: bool = Field(False, description="Compile the model with torch.compile for faster inference after warmup.")
+    enable_thinking: bool = Field(
+        False,
+        description="Enable thinking mode (e.g. Qwen3+). Raise max_new_tokens (e.g. >=4096): "
+                    "the <think> trace is generated before the answer and counts against the budget.",
+    )
 
 
 class BatchConfig(BaseModel):

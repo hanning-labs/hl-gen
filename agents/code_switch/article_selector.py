@@ -68,6 +68,8 @@ class ArticleSelectorAgent(Agent):
         selected = articles[data["article_index"]]
         ctx.tool_context["selected_article"] = selected
         ctx.tool_context["interaction_frame"] = data["frame"].strip()
+        if self._last_reasoning is not None:
+            ctx.tool_context["selector_reasoning"] = self._last_reasoning
         log.info(
             "%s: selected article %d/%d  frame=%r  title=%r",
             self.name,

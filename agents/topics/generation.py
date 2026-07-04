@@ -93,6 +93,7 @@ class TopicGenerationAgent(GeneratorAgent):
                 "instances": instances,
                 "llm_model": llm_resp.model if llm_resp else None,
                 "llm_usage": llm_resp.usage if llm_resp else None,
+                "llm_reasoning": llm_resp.reasoning if llm_resp else None,
                 # For the scorers: the grounding context the generator saw.
                 "article": _format_article(tc),
                 "interaction_frame": tc.get("interaction_frame", ""),

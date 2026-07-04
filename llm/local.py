@@ -67,6 +67,11 @@ class LocalClient:
         How long the drain task waits for a batch to fill before firing with
         whatever it has. Lower values reduce latency; higher values improve
         batching efficiency under load.
+    enable_thinking:
+        Enable thinking mode on chat templates that support it (e.g. Qwen3+).
+        The ``<think>...</think>`` trace is split out of ``LLMResponse.text``
+        into ``LLMResponse.reasoning``. Raise ``max_new_tokens`` accordingly —
+        the trace is generated before the answer and counts against the budget.
     """
 
     def __init__(
@@ -79,6 +84,7 @@ class LocalClient:
         max_batch_size: int = 1,
         batch_timeout_sec: float = 0.02,
         compile_model: bool = False,
+        enable_thinking: bool = False,
     ) -> None:
         self.model = model
         self.device = device
@@ -87,6 +93,7 @@ class LocalClient:
         self.max_batch_size = max_batch_size
         self.batch_timeout_sec = batch_timeout_sec
         self.compile_model = compile_model
+        self.enable_thinking = enable_thinking
         self._tokenizer: Any = None
         self._model: Any = None
         self._queue: asyncio.Queue[_BatchItem | None] = asyncio.Queue()
@@ -141,7 +148,8 @@ class LocalClient:
             chat.extend({"role": m.role, "content": m.content} for m in item.messages)
             texts.append(
                 tokenizer.apply_chat_template(
-                    chat, add_generation_prompt=True, tokenize=False, enable_thinking=False
+                    chat, add_generation_prompt=True, tokenize=False,
+                    enable_thinking=self.enable_thinking,
                 )
             )
 
@@ -211,10 +219,21 @@ class LocalClient:
             prompt_tokens = int(inputs["attention_mask"][i].sum())
             new_tokens = generated[i][max_prompt_len:]
             text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+            # Split the thinking trace out of text so downstream JSON parsing
+            # only ever sees the answer.
+            # ponytail: no guard for truncation mid-<think> (no closing tag →
+            # text stays as partial reasoning and parsing fails); raise
+            # max_new_tokens in the client config when thinking is enabled.
+            reasoning = None
+            if "</think>" in text:
+                reasoning, _, text = text.partition("</think>")
+                reasoning = reasoning.removeprefix("<think>").strip()
+                text = text.strip()
             responses.append(
                 LLMResponse(
                     text=text,
                     model=self.model,
+                    reasoning=reasoning,
                     usage={
                         "prompt_tokens": prompt_tokens,
                         "completion_tokens": int(new_tokens.shape[-1]),

@@ -25,6 +25,7 @@ class LLMResponse(BaseModel):
     text: str
     model: str | None = None
     usage: dict[str, Any] = Field(default_factory=dict)
+    reasoning: str | None = None  # chain-of-thought trace, stripped from `text`
     raw: Any = None  # provider-native response object, for debugging
 
 

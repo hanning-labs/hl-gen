@@ -85,6 +85,12 @@ class Agent(ABC):
         assert last_exc is not None
         raise last_exc
 
+    @property
+    def _last_reasoning(self) -> str | None:
+        """Thinking trace of the last successful LLM call, if any."""
+        resp = getattr(self, "_last_llm_response", None)
+        return resp.reasoning if resp else None
+
 
 class GeneratorAgent(Agent):
     """Produces a CS sample from topic/persona/languages (and feedback)."""
@@ -171,7 +177,7 @@ class DimensionScorer(ScorerAgent):
         passed = sum(bool(data[k]) for k in self.criteria)
         score = passed / len(self.criteria) * 10
         log.debug("%s score=%.1f (%d/%d)", self.name, score, passed, len(self.criteria))
-        return AgentScore(agent=self.name, score=score, rationale=data.get("notes", ""))
+        return AgentScore(agent=self.name, score=score, rationale=data.get("notes", ""), reasoning=self._last_reasoning)
 
 
 class RefinerBase(EditorAgent):
@@ -200,6 +206,11 @@ class RefinerBase(EditorAgent):
             return data
 
         data = await self._complete_with_retry(as_user(self._fill_prompt(sample, report)), system=_REFINER_SYSTEM, validate=_validate)
+
+        # RefinementFeedback is transient, so the trace lives on the sample —
+        # one entry per refinement round.
+        if self._last_reasoning is not None:
+            sample.metadata.setdefault("refiner_reasoning", []).append(self._last_reasoning)
 
         failures = data.get("failures") or []
         if isinstance(failures, str):

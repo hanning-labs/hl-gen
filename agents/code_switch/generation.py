@@ -121,5 +121,6 @@ class GenerationAgent(GeneratorAgent):
                 "instances": instances,
                 "llm_model": llm_resp.model if llm_resp else None,
                 "llm_usage": llm_resp.usage if llm_resp else None,
+                "llm_reasoning": llm_resp.reasoning if llm_resp else None,
             },
         )
