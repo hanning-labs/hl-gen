@@ -52,6 +52,10 @@ class TopicsBatchConfig(BaseModel):
         ]
     )
     news_types: list[str] = Field(default_factory=lambda: ["news", "articles", "discussion"])
+    sources: list[str] = Field(
+        default_factory=lambda: ["currents", "newsapi"],
+        description="News tool providers to ground generation. Subset of {'currents', 'newsapi'}.",
+    )
 
 
 def sample_topics_request(config: TopicsBatchConfig, rng: random.Random) -> TopicsRequest:

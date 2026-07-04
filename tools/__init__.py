@@ -2,5 +2,6 @@
 
 from .base import ToolProvider
 from .currents import CurrentsTool
+from .newsapi import NewsAPITool
 
-__all__ = ["ToolProvider", "CurrentsTool"]
+__all__ = ["ToolProvider", "CurrentsTool", "NewsAPITool"]

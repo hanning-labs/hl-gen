@@ -37,6 +37,7 @@ from llm import LocalClient
 from orchestrator import build_default_pipeline
 from storage.file_store import FileSampleStore
 from tools.currents import CurrentsTool
+from tools.newsapi import NewsAPITool
 
 
 def _write_profile(
@@ -111,7 +112,8 @@ async def main(config_path: str) -> None:
     llm = LocalClient(**config.client.model_dump())
     store = FileSampleStore(samples_path)
     pipeline = build_default_pipeline(llm, store, tools=[
-        CurrentsTool(categories=config.categories, news_types=config.news_types)
+        CurrentsTool(categories=config.categories, news_types=config.news_types),
+        NewsAPITool(categories=config.categories, news_types=config.news_types),
     ])
 
     effective = config.model_copy(update={"n": remaining})

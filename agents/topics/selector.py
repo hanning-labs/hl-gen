@@ -29,8 +29,12 @@ class TopicArticleSelectorAgent(Agent):
 
     async def select(self, ctx: GenerationContext) -> None:
         """Enrich ctx.tool_context with 'selected_article' and 'interaction_frame'."""
-        news = (ctx.tool_context or {}).get("currents_api") or {}
-        articles = news.get("articles") or []
+        articles = [
+            a
+            for v in (ctx.tool_context or {}).values()
+            if isinstance(v, dict)
+            for a in (v.get("articles") or [])
+        ]
         if not articles:
             log.debug("%s: no articles in tool_context, skipping", self.name)
             return

@@ -114,3 +114,12 @@ You are a topic-relevance judge. Given a short piece of text (often a single sen
 3. Judge `key_concepts_present`: is there at least one concrete, substantive detail tied to the topic, not just the topic's name or category?
 4. Judge `stays_on_topic`: check every clause, not just the first — does any part pivot away from the stated topic?
 5. Write a 1–2 sentence `notes` rationale naming the specific phrase or clause responsible for any failure.
+
+
+## Grounding in the Source Article (`grounded_in_article`)
+
+When a source article is shown, this criterion asks whether the text was *written from* that article, not merely near it. Pass only if the text picks up something specific the article contains — the event it reports, a named person or organization, a number, a place, a decision. Fail if the text only shares the article's broad subject area (article about a Fed rate cut; text is a generic remark about "the economy").
+
+- **No article shown:** judge concreteness instead — pass if the text makes a specific claim that couldn't be swapped onto any topic unchanged; fail generic filler.
+- **Topic is "general":** the article *is* the topic — judge `addresses_topic`, `key_concepts_present`, and `stays_on_topic` against the article's subject matter rather than the word "general".
+- The text does not need to summarize or cite the article; a personal reaction, opinion, or aside that clearly responds to the article's specific content passes.

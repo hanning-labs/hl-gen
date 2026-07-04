@@ -1,0 +1,39 @@
+n: 10
+output: out/topics
+run_name: newsapi
+score_threshold: 7
+max_refinement_rounds: 10
+max_concurrent: 1
+
+# Ground generation only in NewsAPI.org articles (skip Currents).
+sources:
+  - newsapi
+
+styles:
+  - conversational
+  - opinion
+  - explainer, casual
+
+perspectives:
+  - third-person
+  - first-person
+  - second-person
+
+tenses:
+  - present
+  - past
+  - future
+
+categories:
+  - health
+  - business
+  - entertainment
+  - general
+  - science
+  - sports
+  - technology
+
+client:
+  model: Qwen/Qwen2.5-7B-Instruct
+  max_new_tokens: 1024
+  max_batch_size: 1

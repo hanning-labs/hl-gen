@@ -35,6 +35,7 @@ from llm import LocalClient
 from orchestrator import build_topics_pipeline
 from storage.file_store import FileSampleStore
 from tools.currents import CurrentsTool
+from tools.newsapi import NewsAPITool
 
 
 def _write_profile(config_path: str, config: TopicsBatchConfig, n_concurrent: int, batch_run: BatchRun, total_accepted: int, run_dir: Path) -> Path:
@@ -100,9 +101,12 @@ async def main(config_path: str) -> None:
 
     llm = LocalClient(**config.client.model_dump())
     store = FileSampleStore(samples_path)
-    pipeline = build_topics_pipeline(llm, store, tools=[
-        CurrentsTool(categories=config.categories, news_types=config.news_types, max_articles=1)
-    ])
+    _tool_factories = {"currents": CurrentsTool, "newsapi": NewsAPITool}
+    tools = [
+        _tool_factories[s](categories=config.categories, news_types=config.news_types, max_articles=10)
+        for s in config.sources
+    ]
+    pipeline = build_topics_pipeline(llm, store, tools=tools)
 
     effective = config.model_copy(update={"n": remaining})
     batch_run = await run_batch(effective, pipeline, sample_fn=sample_topics_request, seed=config.seed)

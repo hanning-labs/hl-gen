@@ -157,7 +157,10 @@ def build_topics_pipeline(
             HumanLikenessAgent(llm),
             StyleAdherenceAgent(llm),
         ],
-        summarizer=SummarizeAgent(llm),
+        # min_dimension_score=6.0: with boolean criteria this means at most one
+        # criterion may fail on any single dimension — a high mean can't mask a
+        # dimension failing outright (e.g. relevance 3.3 + three 10s = 8.3).
+        summarizer=SummarizeAgent(llm, min_dimension_score=6.0),
         refiner=TopicRefinerAgent(llm),
         acceptor=AcceptanceAgent(llm, store),
         tools=tools,

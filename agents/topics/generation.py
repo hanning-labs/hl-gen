@@ -22,7 +22,9 @@ def _format_article(tc: dict) -> str:
         title = (a.get("title") or "").strip()
         body = (a.get("body") or "").strip()
         return f"- {title}\n  {body}" if body else f"- {title}"
-    articles = (tc.get("news") or {}).get("articles") or []
+    articles = [
+        a for v in tc.values() if isinstance(v, dict) for a in (v.get("articles") or [])
+    ]
     if not articles:
         return ""
     a = articles[0]
@@ -75,6 +77,7 @@ class TopicGenerationAgent(GeneratorAgent):
         data = await self._complete_with_retry(as_user(self._fill_prompt(ctx)), system=_SYSTEM, validate=_validate)
         instances = data["instances"]
         llm_resp = getattr(self, "_last_llm_response", None)
+        tc = ctx.tool_context or {}
 
         log.debug("%s generated %d instances for topic=%r", self.name, len(instances), ctx.request.topic)
         text = instances[0] if isinstance(instances[0], str) else str(instances[0])
@@ -90,5 +93,8 @@ class TopicGenerationAgent(GeneratorAgent):
                 "instances": instances,
                 "llm_model": llm_resp.model if llm_resp else None,
                 "llm_usage": llm_resp.usage if llm_resp else None,
+                # For the scorers: the grounding context the generator saw.
+                "article": _format_article(tc),
+                "interaction_frame": tc.get("interaction_frame", ""),
             },
         )

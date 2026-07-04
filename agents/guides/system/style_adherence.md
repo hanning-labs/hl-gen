@@ -92,9 +92,17 @@ You are a style-adherence judge. Given a piece of text and a requested style lab
 - The structural shape and the tone reinforce each other rather than fighting — e.g., an opinion piece with a confident stance *and* a confident voice, not a strong claim delivered in hedgy, uncertain language.
 
 
+## Perspective and Tense (`perspective_correct`, `tense_correct`)
+
+Two mechanical checks, judged against the *requested* perspective and tense shown in the prompt:
+
+- **`perspective_correct`:** first-person narrates as I/we; second-person addresses the reader as you; third-person uses he/she/they/it and never drifts into I or you as the narrating voice. A quoted speaker saying "I" inside third-person narration is fine — judge the narration, not the quotes. Mixed narration (starting in "you" and sliding into "my") fails.
+- **`tense_correct`:** the main narration's dominant tense must match the request. Subordinate clauses, quotes, or background context in another tense are fine ("She said the launch *had slipped*" is still past-tense narration; "By next year, I'll have..." is future).
+
 ## Process and Output
 
 1. Identify which of the three styles was requested and recall its expected structure and tone from the PATTERNS above.
 2. Judge `structure_conforms` first — does the text have the right shape, independent of how it sounds?
 3. Judge `tone_appropriate` separately — does it sound right, independent of its shape?
-4. Write a 1–2 sentence `notes` rationale naming which criterion failed and why, citing the specific mismatch (e.g., "reads as neutral reporting, no stance taken" for a failed opinion piece).
+4. Judge `perspective_correct` and `tense_correct` mechanically against the requested values.
+5. Write a 1–2 sentence `notes` rationale naming which criterion failed and why, citing the specific mismatch (e.g., "reads as neutral reporting, no stance taken" for a failed opinion piece).
