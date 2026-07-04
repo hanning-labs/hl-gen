@@ -2,7 +2,8 @@
 # Run with:  python examples/run_batch.py configs/default.yaml
 
 n: 10
-output: out/batch_samples_article_selector.jsonl
+output: out/batch
+run_name: article_selector
 seed: 36
 
 client:

@@ -25,7 +25,14 @@ class TopicsBatchConfig(BaseModel):
 
     n: int = Field(10, ge=1, description="Total number of samples to attempt.")
     max_concurrent: int | None = Field(None, description="Max concurrent pipelines. None → auto-detect from GPU VRAM.")
-    output: str = "out/topics_samples.jsonl"
+    output: str = Field(
+        "out/topics",
+        description="Base directory for run artifacts; the actual run lives in <output>/<run_name>.",
+    )
+    run_name: str = Field(
+        "default",
+        description="Subdirectory of `output` holding this run's samples.jsonl + profile_*.json.",
+    )
     client: LocalClientConfig = Field(default_factory=LocalClientConfig)
     seed: int | None = Field(None, description="RNG seed for reproducible request sampling.")
     score_threshold: float = 8.0

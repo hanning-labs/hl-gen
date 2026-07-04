@@ -1,13 +1,14 @@
-n: 10
-output: out/topics_samples.jsonl
-score_threshold: 8.0
+n: 25
+output: out/topics
+run_name: default
+score_threshold: 8
 max_refinement_rounds: 3
+max_concurrent: 1
 
 styles:
   - conversational 
   - opinion
   - explainer, casual
-  - explainer, formal
 
 perspectives:
   - third-person
@@ -35,11 +36,10 @@ categories:
   - health
 
 news_types:
-  - news
   - articles
   - discussion
 
 client:
-  model: Qwen/Qwen2.5-7B-Instruct
+  model: Qwen/Qwen2.5-7B-Instruct 
   max_new_tokens: 1024
   max_batch_size: 1

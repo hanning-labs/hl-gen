@@ -52,7 +52,7 @@ python examples/run_batch.py configs/default.yaml          # code-switching
 python examples/run_topics_batch.py configs/topics_default.yaml   # topics
 ```
 
-Both runners resume from partial output, auto-detect GPU concurrency (~1 pipeline per 8 GB VRAM), and write a performance profile to `docs/`.
+Both runners resume from partial output, auto-detect GPU concurrency (~1 pipeline per 8 GB VRAM), and write a performance profile to `<output>/profile_*.json`.
 
 ### News grounding (Currents API)
 
@@ -109,7 +109,7 @@ All agents inherit `_complete_with_retry()`: calls the LLM, parses JSON, retries
 
 Full field definitions live in `batch.py` (`BatchConfig`, `LocalClientConfig`) and `config_topics.py` (`TopicsBatchConfig`). Working examples: `configs/default.yaml` and `configs/topics_default.yaml`.
 
-**Shared keys** (both pipelines): `n`, `output`, `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`, `client` (model, device, dtype, max\_new\_tokens, max\_batch\_size, compile\_model).
+**Shared keys** (both pipelines): `n`, `output` (base artifacts directory), `run_name` (subdirectory of `output` holding this run's `samples.jsonl` + `profile_*.json`), `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`, `client` (model, device, dtype, max\_new\_tokens, max\_batch\_size, compile\_model).
 
 **Code-switching only**: `language_pairs`, `cs_types`, `cs_functions`, `cs_ratio_min/max`, `age_min/max`, `genders`, `conversation_types`.
 

@@ -6,7 +6,11 @@ Usage
 
 Reads the YAML config, randomly samples ``n`` TopicsRequests grounded in
 Currents API articles, and runs them concurrently.
-Accepted samples are written to the path set in ``output``.
+Accepted samples are written to ``<output>/<run_name>/samples.jsonl``, and a
+performance profile snapshot is written to
+``<output>/<run_name>/profile_topics_<timestamp>.json`` after each invocation.
+If ``samples.jsonl`` already contains accepted samples the run resumes from
+where it left off.
 """
 
 from __future__ import annotations
@@ -33,7 +37,7 @@ from storage.file_store import FileSampleStore
 from tools.currents import CurrentsTool
 
 
-def _write_profile(config_path: str, config: TopicsBatchConfig, n_concurrent: int, batch_run: BatchRun, total_accepted: int) -> Path:
+def _write_profile(config_path: str, config: TopicsBatchConfig, n_concurrent: int, batch_run: BatchRun, total_accepted: int, run_dir: Path) -> Path:
     t = batch_run.request_timings_sec
     sorted_t = sorted(t)
     n = len(t)
@@ -64,10 +68,8 @@ def _write_profile(config_path: str, config: TopicsBatchConfig, n_concurrent: in
         },
     }
 
-    docs = Path(__file__).parent.parent / "docs"
-    docs.mkdir(exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    out = docs / f"profile_topics_{ts}.json"
+    out = run_dir / f"profile_topics_{ts}.json"
     out.write_text(json.dumps(profile, indent=2))
     return out
 
@@ -76,10 +78,14 @@ async def main(config_path: str) -> None:
     with open(config_path) as f:
         config = TopicsBatchConfig.model_validate(yaml.safe_load(f))
 
-    already_done = count_existing(config.output)
+    run_dir = Path(config.output) / config.run_name
+    run_dir.mkdir(parents=True, exist_ok=True)
+    samples_path = run_dir / "samples.jsonl"
+
+    already_done = count_existing(str(samples_path))
     remaining = config.n - already_done
     if remaining <= 0:
-        print(f"Already complete: {already_done}/{config.n} samples in {config.output}")
+        print(f"Already complete: {already_done}/{config.n} samples in {samples_path}")
         return
 
     n_jobs = config.max_concurrent or default_max_concurrent()
@@ -89,11 +95,11 @@ async def main(config_path: str) -> None:
     print(f"  target      : {config.n}  (resuming — {already_done} already accepted)")
     print(f"  remaining   : {remaining}")
     print(f"  concurrent  : {n_jobs}")
-    print(f"  output      : {config.output}")
+    print(f"  run dir     : {run_dir}")
     print()
 
     llm = LocalClient(**config.client.model_dump())
-    store = FileSampleStore(config.output)
+    store = FileSampleStore(samples_path)
     pipeline = build_topics_pipeline(llm, store, tools=[
         CurrentsTool(categories=config.categories, news_types=config.news_types, max_articles=1)
     ])
@@ -104,9 +110,9 @@ async def main(config_path: str) -> None:
     newly_accepted = sum(1 for r in batch_run.results if r is not None)
     total_accepted = already_done + newly_accepted
     print()
-    print(f"Done. {total_accepted}/{config.n} samples accepted → {config.output}")
+    print(f"Done. {total_accepted}/{config.n} samples accepted → {samples_path}")
 
-    profile_path = _write_profile(config_path, config, n_jobs, batch_run, total_accepted)
+    profile_path = _write_profile(config_path, config, n_jobs, batch_run, total_accepted, run_dir)
     print(f"Profile  → {profile_path}")
 
 

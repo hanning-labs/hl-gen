@@ -51,7 +51,15 @@ class BatchConfig(BaseModel):
     max_concurrent: int | None = Field(
         None, description="Max concurrent pipelines. None → auto-detect from GPU VRAM."
     )
-    output: str = "out/batch_samples.jsonl"
+    output: str = Field(
+        "out/batch",
+        description="Base directory for run artifacts; the actual run lives in <output>/<run_name>.",
+    )
+    run_name: str = Field(
+        "default",
+        description="Subdirectory of `output` holding this run's samples.jsonl + profile_*.json. "
+                     "Reused across invocations to resume an in-progress run.",
+    )
     client: LocalClientConfig = Field(default_factory=LocalClientConfig)
     seed: int | None = Field(None, description="RNG seed for reproducible request sampling.")
     score_threshold: float = 7.0

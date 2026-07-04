@@ -1,0 +1,26 @@
+n: 1
+output: out/topics
+run_name: debug
+score_threshold: 7.0
+max_refinement_rounds: 2
+max_concurrent: 1
+
+styles:
+  - conversational
+
+perspectives:
+  - third-person
+
+tenses:
+  - present
+
+categories:
+  - science_technology
+
+news_types:
+  - articles
+
+client:
+  model: Qwen/Qwen2.5-7B-Instruct
+  max_new_tokens: 1024
+  max_batch_size: 1
