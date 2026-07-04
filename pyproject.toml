@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hl-gen"
 version = "0.1.0"
-description = "hl-gen code-switching data synthesis framework (skeleton)."
+description = "Hanning Labs data synthesis framework"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.6",
