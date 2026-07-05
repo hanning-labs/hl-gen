@@ -1,0 +1,55 @@
+# Batch synthesis against a vLLM (or any OpenAI-compatible) server.
+# Start the server first:  scripts/serve_vllm.sh
+# Then run:                python examples/run_batch.py configs/default_vllm.yaml
+
+n: 10
+output: out/batch
+run_name: vllm
+seed: 36
+
+client:
+    backend: openai
+    base_url: http://localhost:8000/v1   # point at a VM to run remotely
+    model: AxionML/Qwen3.5-9B-NVFP4      # must match what the server is serving
+    max_new_tokens: 4096                 # thinking trace precedes the answer; needs headroom
+score_threshold: 8.0
+max_refinement_rounds: 3
+# max_concurrent: 8   # server handles batching; raise freely, this only caps in-flight pipelines
+
+cs_types: [intra_sentential, inter_sentential, tag]
+cs_functions: [expressive, quotation, emphasis, clarification]
+cs_ratio_min: 0.2
+cs_ratio_max: 0.5
+
+language_pairs:
+  - [Cantonese, English]
+  - [Spanish, English]
+  - [Mandarin, English]
+
+age_min: 18
+age_max: 60
+genders: [male, female, non-binary]
+
+perspectives: [first-person, third-person]
+tenses: [past, present, future]
+conversation_types: [casual chat, formal discussion, debate, storytelling]
+
+categories:
+  - general
+  - society
+  - science_technology
+  - politics_government
+  - economy_business_finance
+  - arts_culture_entertainment
+  - lifestyle_leisure
+  - human_interest
+  - sport
+  - crime_law_justice
+  - education
+  - environment
+  - labour
+  - health
+  - automotive
+  - real_estate
+
+news_types: [news, articles, discussion]

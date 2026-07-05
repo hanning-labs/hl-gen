@@ -54,6 +54,20 @@ python examples/run_topics_batch.py configs/topics_default.yaml   # topics
 
 Both runners resume from partial output, auto-detect GPU concurrency (~1 pipeline per 8 GB VRAM), and write a performance profile to `<output>/profile_*.json`.
 
+### Inference backends
+
+The `client.backend` key in the YAML selects how inference runs:
+
+- **`local`** (default) — in-process HF `transformers` via `LocalClient`. Zero infrastructure; batching/OOM handled client-side.
+- **`openai`** — any OpenAI-compatible server via `OpenAICompatClient` (vLLM recommended; SGLang etc. work identically). Continuous batching, paged KV cache, and OOM handling live server-side.
+
+```bash
+scripts/serve_vllm.sh                                # serve on the local GPU (own venv, one-time install)
+python examples/run_batch.py configs/default_vllm.yaml
+```
+
+The server runs in its own venv/Docker, so its torch pin never conflicts with the app environment (see `docs/vllm_scoping.md`). To run against a VM, start the server there and set `client.base_url: http://<vm>:8000/v1` — nothing else changes.
+
 ### News grounding (Currents API)
 
 ```bash
@@ -107,9 +121,9 @@ All agents inherit `_complete_with_retry()`: calls the LLM, parses JSON, retries
 
 ## Config reference
 
-Full field definitions live in `batch.py` (`BatchConfig`, `LocalClientConfig`) and `config_topics.py` (`TopicsBatchConfig`). Working examples: `configs/default.yaml` and `configs/topics_default.yaml`.
+Full field definitions live in `batch.py` (`BatchConfig`, `LocalClientConfig`, `OpenAIClientConfig`) and `config_topics.py` (`TopicsBatchConfig`). Working examples: `configs/default.yaml`, `configs/default_vllm.yaml`, and `configs/topics_default.yaml`.
 
-**Shared keys** (both pipelines): `n`, `output` (base artifacts directory), `run_name` (subdirectory of `output` holding this run's `samples.jsonl` + `profile_*.json`), `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`, `client` (model, device, dtype, max\_new\_tokens, max\_batch\_size, compile\_model).
+**Shared keys** (both pipelines): `n`, `output` (base artifacts directory), `run_name` (subdirectory of `output` holding this run's `samples.jsonl` + `profile_*.json`), `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`, `client` (discriminated on `backend`: `local` → model, device, dtype, max\_new\_tokens, max\_batch\_size, compile\_model; `openai` → base\_url, model, max\_new\_tokens, timeout).
 
 **Code-switching only**: `language_pairs`, `cs_types`, `cs_functions`, `cs_ratio_min/max`, `age_min/max`, `genders`, `conversation_types`.
 

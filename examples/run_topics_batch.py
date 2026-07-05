@@ -29,9 +29,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from batch import BatchRun, count_existing, default_max_concurrent, run_batch
+from batch import BatchRun, count_existing, default_max_concurrent, make_client, run_batch
 from config_topics import TopicsBatchConfig, sample_topics_request
-from llm import LocalClient
 from orchestrator import build_topics_pipeline
 from storage.file_store import FileSampleStore
 from tools.currents import CurrentsTool
@@ -99,7 +98,7 @@ async def main(config_path: str) -> None:
     print(f"  run dir     : {run_dir}")
     print()
 
-    llm = LocalClient(**config.client.model_dump())
+    llm = make_client(config.client)
     store = FileSampleStore(samples_path)
     _tool_factories = {"currents": CurrentsTool, "newsapi": NewsAPITool}
     tools = [
