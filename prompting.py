@@ -9,7 +9,7 @@ fences and locates the JSON span inside surrounding prose.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Iterator
 
 from llm.base import Message
 from models import RefinementFeedback
@@ -19,6 +19,7 @@ __all__ = [
     "json_only_instruction",
     "as_user",
     "describe_feedback",
+    "iter_json_candidates",
     "parse_json",
 ]
 
@@ -70,9 +71,10 @@ def _strip_code_fences(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def _find_json_span(s: str) -> str | None:
-    """Return the first balanced ``{...}`` / ``[...]`` span, respecting string literals."""
-    start = next((i for i, ch in enumerate(s) if ch in "{["), None)
+def _find_json_span(s: str, pos: int = 0) -> tuple[str, int] | None:
+    """Return the first balanced ``{...}`` / ``[...]`` span at or after ``pos``,
+    respecting string literals, as ``(span, start_index)``."""
+    start = next((i for i in range(pos, len(s)) if s[i] in "{["), None)
     if start is None:
         return None
     depth = 0
@@ -95,24 +97,34 @@ def _find_json_span(s: str) -> str | None:
         elif ch in "}]":
             depth -= 1
             if depth == 0:
-                return s[start : i + 1]
+                return s[start : i + 1], start
     return None
 
 
-def extract_json(text: str) -> str:
-    """Extract the JSON object/array substring from a possibly noisy model reply."""
+def iter_json_candidates(text: str) -> Iterator[Any]:
+    """Yield every decodable JSON value from the balanced ``{...}``/``[...]``
+    spans in a possibly noisy model reply, in order of appearance.
+
+    A reply may quote the requested shape (``{"text": "..."}``) inside prose or
+    a leaked thinking trace before the actual answer, so callers should keep
+    consuming candidates until one passes their validation.
+    """
     if not text or not text.strip():
-        raise PromptParseError("empty model output")
-    span = _find_json_span(_strip_code_fences(text)) or _find_json_span(text)
-    if span is None:
-        raise PromptParseError(f"no JSON object/array found in model output: {text!r}")
-    return span
+        return
+    stripped = _strip_code_fences(text)
+    for candidate in (stripped,) if stripped == text.strip() else (stripped, text):
+        pos = 0
+        while (found := _find_json_span(candidate, pos)) is not None:
+            span, start = found
+            try:
+                yield json.loads(span)
+            except json.JSONDecodeError:
+                pass
+            pos = start + 1
 
 
 def parse_json(text: str) -> Any:
-    """Extract and decode JSON from a model reply."""
-    span = extract_json(text)
-    try:
-        return json.loads(span)
-    except json.JSONDecodeError as exc:
-        raise PromptParseError(f"invalid JSON in model output: {exc}") from exc
+    """Extract and decode JSON from a model reply (first decodable span)."""
+    for value in iter_json_candidates(text):
+        return value
+    raise PromptParseError(f"no decodable JSON object/array in model output: {text[:300]!r}")

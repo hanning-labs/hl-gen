@@ -68,6 +68,9 @@ class Agent(ABC):
 
         ``validate`` receives the parsed value and should raise ``PromptParseError``
         if the shape is wrong. Its return value is forwarded to the caller.
+        Every decodable JSON span in the reply is offered to ``validate`` in
+        turn — a reply may echo the requested shape as a placeholder before the
+        real answer — and only if none passes does the LLM call retry.
         """
         last_exc: PromptParseError | None = None
         for attempt in range(self.parse_retries + 1):

@@ -195,7 +195,6 @@ class CurrentsTool:
             log.info("Page %d returned 0 articles — retrying at page 1", page_number)
             return self._fetch_sync(topic, language, category, content_type, 1, page_size, start_date, end_date)
 
-        log.info("Fetched %d articles  topic=%r", len(articles), topic)
         return {
             "articles": articles,
             "source": "currents",

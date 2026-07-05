@@ -72,6 +72,11 @@ class TopicGenerationAgent(GeneratorAgent):
             instances = data.get("instances")
             if not isinstance(instances, list) or not instances:
                 raise PromptParseError("generation reply had no non-empty 'instances' array")
+            first = instances[0]
+            if isinstance(first, str) and len(first.strip()) < 20:
+                raise PromptParseError(
+                    f"generation reply looks like an echoed format placeholder, not real text: {first!r}"
+                )
             return data
 
         data = await self._complete_with_retry(as_user(self._fill_prompt(ctx)), system=_SYSTEM, validate=_validate)

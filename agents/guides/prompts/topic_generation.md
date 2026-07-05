@@ -14,5 +14,5 @@ Requirements:
 - No contrast-negation framing: never use "it's not (just) about X, it's about Y", "isn't merely X — it's Y", "more than just X, but Y", "aren't just X; they're also Y", or similar not-X-but-Y constructions. State the point directly.
 - Sound like a specific person wrote it, not a brochure.
 
-Output a single JSON object:
-{{"instances": ["<generated text>"]}}
+Output a single JSON object with your written text as the only element of "instances":
+{{"instances": ["..."]}}

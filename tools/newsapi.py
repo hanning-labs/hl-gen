@@ -118,7 +118,6 @@ class NewsAPITool:
                 "category": [category] if category else [],
             })
 
-        log.info("Fetched %d articles  q=%r", len(articles), keyword)
         return {
             "articles": articles,
             "source": "newsapi",

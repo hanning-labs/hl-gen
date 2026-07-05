@@ -1,4 +1,4 @@
-n: 10
+n: 1
 output: out/topics
 run_name: newsapi
 score_threshold: 7
@@ -34,6 +34,11 @@ categories:
   - technology
 
 client:
-  model: Qwen/Qwen2.5-7B-Instruct
-  max_new_tokens: 1024
+  model: Qwen/Qwen3.5-9B 
+  enable_thinking: true
+  max_new_tokens: 81920
   max_batch_size: 1
+  top_k: 20
+  min_p: 0
+  presence_penalty: 1.5
+  repetition_penalty: 1.0

@@ -116,11 +116,20 @@ class LocalClient:
             self.model, self.device or "auto", self.dtype, self.compile_model,
         )
         self._tokenizer = AutoTokenizer.from_pretrained(self.model)
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.model,
-            torch_dtype=self.dtype,
-            device_map=self.device or "auto",
-        )
+        model_kwargs: dict[str, Any] = {
+            "torch_dtype": self.dtype,
+            "device_map": self.device or "auto",
+        }
+        # ponytail: opportunistic flash-attn — used when installed and on GPU,
+        # silently falls back to SDPA otherwise.
+        import torch
+        if self.device != "cpu" and torch.cuda.is_available():
+            try:
+                import flash_attn  # noqa: F401
+                model_kwargs["attn_implementation"] = "flash_attention_2"
+            except ImportError:
+                pass
+        self._model = AutoModelForCausalLM.from_pretrained(self.model, **model_kwargs)
 
         if self.compile_model:
             import torch

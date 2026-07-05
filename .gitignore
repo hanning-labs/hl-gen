@@ -74,3 +74,6 @@ ipython_config.py
 
 # OS files
 .DS_Store
+
+# repowise API keys (local)
+.repowise/.env
