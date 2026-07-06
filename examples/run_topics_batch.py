@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from batch import BatchRun, count_existing, default_max_concurrent, make_client, run_batch
+from batch import DEFAULT_MAX_CONCURRENT, BatchRun, count_existing, make_client, run_batch
 from config_topics import TopicsBatchConfig, sample_topics_request
 from orchestrator import build_topics_pipeline
 from storage.file_store import FileSampleStore
@@ -88,7 +88,7 @@ async def main(config_path: str) -> None:
         print(f"Already complete: {already_done}/{config.n} samples in {samples_path}")
         return
 
-    n_jobs = config.max_concurrent or default_max_concurrent()
+    n_jobs = config.max_concurrent or DEFAULT_MAX_CONCURRENT
 
     print("Batch topics synthesis")
     print(f"  config      : {config_path}")

@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from batch import BatchConfig, BatchRun, count_existing, default_max_concurrent, make_client, run_batch
+from batch import DEFAULT_MAX_CONCURRENT, BatchConfig, BatchRun, count_existing, make_client, run_batch
 from orchestrator import build_default_pipeline
 from storage.file_store import FileSampleStore
 from tools.currents import CurrentsTool
@@ -98,7 +98,7 @@ async def main(config_path: str) -> None:
         print(f"Already complete: {already_done}/{config.n} samples in {samples_path}")
         return
 
-    n_jobs = config.max_concurrent or default_max_concurrent()
+    n_jobs = config.max_concurrent or DEFAULT_MAX_CONCURRENT
 
     print(f"Batch synthesis")
     print(f"  config      : {config_path}")

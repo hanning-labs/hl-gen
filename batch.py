@@ -92,7 +92,7 @@ class BatchConfig(BaseModel):
 
     n: int = Field(10, ge=1, description="Total number of samples to attempt.")
     max_concurrent: int | None = Field(
-        None, description="Max concurrent pipelines. None → auto-detect from GPU VRAM."
+        None, description="Max concurrent pipelines. None → DEFAULT_MAX_CONCURRENT."
     )
     output: str = Field(
         "out/batch",
@@ -147,16 +147,10 @@ class BatchConfig(BaseModel):
     news_types: list[str] = Field(default_factory=lambda: ["news", "articles", "discussion"])
 
 
-def default_max_concurrent() -> int:
-    """Estimate max concurrent pipelines from available GPU VRAM (~1 per 8 GB)."""
-    try:
-        import torch
-        if torch.cuda.is_available():
-            mem_gb = torch.cuda.get_device_properties(0).total_memory / 1024 ** 3
-            return max(1, int(mem_gb // 8))
-    except ImportError:
-        pass
-    return 1
+#: Default in-flight pipeline cap; raise via ``max_concurrent`` in the YAML.
+#: The server's continuous batching absorbs bursts — this semaphore only
+#: bounds how many pipelines run concurrently client-side.
+DEFAULT_MAX_CONCURRENT = 8
 
 
 def sample_request(config: BatchConfig, rng: random.Random) -> SynthesisRequest:
@@ -208,12 +202,12 @@ async def run_batch(
 ) -> BatchRun:
     """Run ``config.n`` synthesis requests concurrently and return a :class:`BatchRun`.
 
-    Concurrency is bounded by ``config.max_concurrent`` (or ``default_max_concurrent()``
-    if unset). ``LocalClient._lock`` serializes actual GPU inference, so the semaphore
-    only limits how many pipelines are in-flight at once.
+    Concurrency is bounded by ``config.max_concurrent`` (or ``DEFAULT_MAX_CONCURRENT``
+    if unset). The server's continuous batching handles actual inference scheduling,
+    so the semaphore only limits how many pipelines are in-flight at once.
     """
     _sample_fn = sample_fn if sample_fn is not None else sample_request
-    n_jobs = config.max_concurrent or default_max_concurrent()
+    n_jobs = config.max_concurrent or DEFAULT_MAX_CONCURRENT
     sem = asyncio.Semaphore(n_jobs)
     rng = random.Random(seed)
     completed = 0

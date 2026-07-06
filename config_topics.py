@@ -24,7 +24,7 @@ class TopicsBatchConfig(BaseModel):
     """Configuration for a batch topics synthesis run, loaded from YAML."""
 
     n: int = Field(10, ge=1, description="Total number of samples to attempt.")
-    max_concurrent: int | None = Field(None, description="Max concurrent pipelines. None → auto-detect from GPU VRAM.")
+    max_concurrent: int | None = Field(None, description="Max concurrent pipelines. None → batch.DEFAULT_MAX_CONCURRENT.")
     output: str = Field(
         "out/topics",
         description="Base directory for run artifacts; the actual run lives in <output>/<run_name>.",
