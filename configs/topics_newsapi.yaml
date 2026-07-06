@@ -1,9 +1,8 @@
 n: 1
 output: out/topics
 run_name: newsapi
-score_threshold: 4
+score_threshold: 1
 max_refinement_rounds: 10
-max_concurrent: 1
 
 # Ground generation only in NewsAPI.org articles (skip Currents).
 sources:

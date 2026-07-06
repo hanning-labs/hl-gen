@@ -13,7 +13,7 @@ client:
     max_new_tokens: 1024
 score_threshold: 8.0
 max_refinement_rounds: 3
-# max_concurrent: 2   # omit to auto-detect from GPU VRAM (~1 per 8 GB)
+# max_concurrent: 8   # omit for the default of 8; raise freely, server absorbs bursts
 
 cs_types: [intra_sentential, inter_sentential, tag]
 cs_functions: [expressive, quotation, emphasis, clarification]

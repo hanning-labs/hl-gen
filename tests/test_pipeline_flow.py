@@ -10,8 +10,8 @@ from __future__ import annotations
 import pytest
 import yaml
 
-from batch import BatchConfig, BatchRun, LocalClientConfig, run_batch
-from llm.local import DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL as LOCAL_DEFAULT_MODEL
+from batch import BatchConfig, BatchRun, OpenAIClientConfig, run_batch
+from llm.openai_compat import DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL
 from config import (
     BasicSetting,
     CharacterSetting,
@@ -36,18 +36,17 @@ from models import (
 from orchestrator import SynthesisPipeline
 
 
-def test_local_client_config_defaults() -> None:
-    cfg = LocalClientConfig()
-    assert cfg.model == LOCAL_DEFAULT_MODEL
-    assert cfg.device is None
-    assert cfg.dtype == "auto"
+def test_openai_client_config_defaults() -> None:
+    cfg = OpenAIClientConfig()
+    assert cfg.model == DEFAULT_MODEL
+    assert cfg.base_url == "http://localhost:8000/v1"
     assert cfg.max_new_tokens == DEFAULT_MAX_NEW_TOKENS
 
 
 def test_batch_config_client_defaults() -> None:
     cfg = BatchConfig.model_validate({"n": 5})
-    assert isinstance(cfg.client, LocalClientConfig)
-    assert cfg.client.model == LOCAL_DEFAULT_MODEL
+    assert isinstance(cfg.client, OpenAIClientConfig)
+    assert cfg.client.model == DEFAULT_MODEL
 
 
 def test_batch_config_client_from_yaml() -> None:
@@ -55,14 +54,12 @@ def test_batch_config_client_from_yaml() -> None:
 n: 5
 client:
   model: Qwen/Qwen2.5-14B-Instruct
-  device: cuda
-  dtype: bfloat16
+  base_url: http://localhost:9000/v1
   max_new_tokens: 512
 """)
     cfg = BatchConfig.model_validate(raw)
     assert cfg.client.model == "Qwen/Qwen2.5-14B-Instruct"
-    assert cfg.client.device == "cuda"
-    assert cfg.client.dtype == "bfloat16"
+    assert cfg.client.base_url == "http://localhost:9000/v1"
     assert cfg.client.max_new_tokens == 512
 
 
@@ -127,31 +124,12 @@ def test_unseeded_runs_differ() -> None:
     assert [r.model_dump() for r in requests_a] != [r.model_dump() for r in requests_b]
 
 
-def test_local_client_config_batch_defaults() -> None:
-    cfg = LocalClientConfig()
-    assert cfg.max_batch_size == 1
-    assert cfg.batch_timeout_sec == 0.02
-    assert cfg.compile_model is False
-
-
-def test_local_client_config_compile_from_yaml() -> None:
-    cfg = LocalClientConfig.model_validate(yaml.safe_load("compile_model: true"))
-    assert cfg.compile_model is True
-
-
-def test_local_client_config_batch_from_yaml() -> None:
-    raw = yaml.safe_load("max_batch_size: 4\nbatch_timeout_sec: 0.05")
-    cfg = LocalClientConfig.model_validate(raw)
-    assert cfg.max_batch_size == 4
-    assert cfg.batch_timeout_sec == 0.05
-
-
-def test_local_client_config_model_dump_matches_local_client_signature() -> None:
-    """model_dump() keys must match LocalClient.__init__ parameter names exactly."""
-    from llm.local import LocalClient
+def test_openai_client_config_model_dump_matches_client_signature() -> None:
+    """model_dump() keys (minus backend) must match OpenAICompatClient.__init__ parameters."""
+    from llm.openai_compat import OpenAICompatClient
     import inspect
-    sig_params = set(inspect.signature(LocalClient.__init__).parameters) - {"self"}
-    cfg_keys = set(LocalClientConfig().model_dump().keys())
+    sig_params = set(inspect.signature(OpenAICompatClient.__init__).parameters) - {"self"}
+    cfg_keys = set(OpenAIClientConfig().model_dump().keys()) - {"backend"}
     assert cfg_keys == sig_params
 
 

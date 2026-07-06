@@ -6,7 +6,7 @@ import random
 
 from pydantic import BaseModel, Field
 
-from batch import ClientConfig, LocalClientConfig
+from batch import OpenAIClientConfig
 
 
 class TopicsRequest(BaseModel):
@@ -33,7 +33,7 @@ class TopicsBatchConfig(BaseModel):
         "default",
         description="Subdirectory of `output` holding this run's samples.jsonl + profile_*.json.",
     )
-    client: ClientConfig = Field(default_factory=LocalClientConfig)
+    client: OpenAIClientConfig = Field(default_factory=OpenAIClientConfig)
     seed: int | None = Field(None, description="RNG seed for reproducible request sampling.")
     score_threshold: float = 8.0
     max_refinement_rounds: int = Field(3, ge=1)

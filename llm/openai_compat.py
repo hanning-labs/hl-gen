@@ -3,9 +3,9 @@
 Talks to any OpenAI-compatible ``/v1/chat/completions`` endpoint — a local
 vLLM server by default (see ``scripts/serve_vllm.sh``), but equally SGLang or
 a server on a remote VM: only ``base_url`` changes. The server owns batching
-(continuous batching), KV-cache management, and OOM recovery, so unlike
-:class:`~llm.local.LocalClient` there is no client-side queue or drain loop —
-each :meth:`complete` is a single awaited HTTP call.
+(continuous batching), KV-cache management, and OOM recovery, so there is no
+client-side queue or drain loop — each :meth:`complete` is a single awaited
+HTTP call.
 """
 
 from __future__ import annotations
@@ -15,9 +15,10 @@ from typing import Any
 from openai import AsyncOpenAI
 
 from .base import LLMResponse, Message
-from .local import DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL
 
 DEFAULT_BASE_URL = "http://localhost:8000/v1"
+DEFAULT_MODEL = "AxionML/Qwen3.5-9B-NVFP4"
+DEFAULT_MAX_NEW_TOKENS = 1024
 
 
 class OpenAICompatClient:
@@ -66,9 +67,8 @@ class OpenAICompatClient:
         """Return a completion for ``messages`` under an optional ``system`` prompt.
 
         ``max_new_tokens`` is mapped to the API's ``max_tokens``; ``json_schema``
-        (same kwarg :class:`~llm.local.LocalClient` accepts) is mapped to
-        ``response_format`` for server-side constrained decoding. Remaining
-        ``**kwargs`` (``temperature``, ``top_p``, …) pass through unchanged.
+        is mapped to ``response_format`` for server-side constrained decoding.
+        Remaining ``**kwargs`` (``temperature``, ``top_p``, …) pass through unchanged.
         """
         chat: list[dict[str, str]] = []
         if system is not None:
@@ -94,7 +94,7 @@ class OpenAICompatClient:
 
         # vLLM's --reasoning-parser splits the trace out server-side (field is
         # `reasoning` in vLLM 0.24, `reasoning_content` in older/other servers);
-        # without it, split an inline <think> block like LocalClient.
+        # without it, split an inline <think> block as a fallback.
         reasoning = (
             getattr(message, "reasoning_content", None)
             or getattr(message, "reasoning", None)

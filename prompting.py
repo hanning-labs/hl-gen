@@ -1,9 +1,10 @@
 """Shared prompt helpers and JSON-response parsing.
 
-Agents build their prompts from the SwitchLingua templates and parse the local
-model's free-form reply back into JSON. Local models have no guaranteed
-JSON-schema mode, so the parsing here is deliberately forgiving — it strips code
-fences and locates the JSON span inside surrounding prose.
+Agents build their prompts from the SwitchLingua templates and parse the
+model's reply back into JSON. Callers that pass ``json_schema`` get
+server-side guided decoding (see ``agents.base.DimensionScorer``/``RefinerBase``),
+but the parsing here stays deliberately forgiving as a fallback — it strips
+code fences and locates the JSON span inside surrounding prose.
 """
 
 from __future__ import annotations

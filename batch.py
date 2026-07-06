@@ -13,15 +13,14 @@ import logging
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Literal
+from typing import Literal
 
 log = logging.getLogger(__name__)
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, Field
 
-from llm import LLMClient, LocalClient, OpenAICompatClient
-from llm.local import DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL as LOCAL_DEFAULT_MODEL
-from llm.openai_compat import DEFAULT_BASE_URL
+from llm import LLMClient, OpenAICompatClient
+from llm.openai_compat import DEFAULT_BASE_URL, DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL
 from config import (
     BasicSetting,
     CharacterSetting,
@@ -34,24 +33,6 @@ from orchestrator import SynthesisPipeline
 from storage.file_store import FileSampleStore
 
 
-class LocalClientConfig(BaseModel):
-    """LocalClient construction parameters, embeddable in a YAML batch config."""
-
-    backend: Literal["local"] = "local"
-    model: str = LOCAL_DEFAULT_MODEL
-    device: str | None = None
-    dtype: str = "auto"
-    max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
-    max_batch_size: int = Field(1, ge=1, description="Max requests per model.generate() call. Set >1 to enable batching.")
-    batch_timeout_sec: float = Field(0.02, description="Max seconds to wait for a batch to fill before firing.")
-    compile_model: bool = Field(False, description="Compile the model with torch.compile for faster inference after warmup.")
-    enable_thinking: bool = Field(
-        False,
-        description="Enable thinking mode (e.g. Qwen3+). Raise max_new_tokens (e.g. >=4096): "
-                    "the <think> trace is generated before the answer and counts against the budget.",
-    )
-
-
 class OpenAIClientConfig(BaseModel):
     """OpenAICompatClient construction parameters, embeddable in a YAML batch config.
 
@@ -61,30 +42,15 @@ class OpenAIClientConfig(BaseModel):
 
     backend: Literal["openai"] = "openai"
     base_url: str = Field(DEFAULT_BASE_URL, description="Server endpoint, e.g. http://<vm>:8000/v1.")
-    model: str = Field(LOCAL_DEFAULT_MODEL, description="Model id as the server knows it.")
+    model: str = Field(DEFAULT_MODEL, description="Model id as the server knows it.")
     max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
     api_key: str = Field("EMPTY", description="Bearer token; local vLLM/SGLang servers ignore it.")
     timeout: float = Field(600.0, description="Per-request timeout in seconds.")
 
 
-def _default_backend(v: Any) -> Any:
-    """Pre-existing YAMLs have no ``backend`` key; treat them as ``local``."""
-    if isinstance(v, dict) and "backend" not in v:
-        return {**v, "backend": "local"}
-    return v
-
-
-ClientConfig = Annotated[
-    LocalClientConfig | OpenAIClientConfig,
-    Field(discriminator="backend"),
-    BeforeValidator(_default_backend),
-]
-
-
-def make_client(config: LocalClientConfig | OpenAIClientConfig) -> LLMClient:
-    """Instantiate the LLM client selected by ``config.backend``."""
-    cls = {"local": LocalClient, "openai": OpenAICompatClient}[config.backend]
-    return cls(**config.model_dump(exclude={"backend"}))
+def make_client(config: OpenAIClientConfig) -> LLMClient:
+    """Instantiate the LLM client from its YAML-embeddable config."""
+    return OpenAICompatClient(**config.model_dump(exclude={"backend"}))
 
 
 class BatchConfig(BaseModel):
@@ -103,7 +69,7 @@ class BatchConfig(BaseModel):
         description="Subdirectory of `output` holding this run's samples.jsonl + profile_*.json. "
                      "Reused across invocations to resume an in-progress run.",
     )
-    client: ClientConfig = Field(default_factory=LocalClientConfig)
+    client: OpenAIClientConfig = Field(default_factory=OpenAIClientConfig)
     seed: int | None = Field(None, description="RNG seed for reproducible request sampling.")
     score_threshold: float = 7.0
     max_refinement_rounds: int = Field(3, ge=1)
