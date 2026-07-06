@@ -13,13 +13,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-local = ["transformers>=5.13,<6.0", "torch>=2.2", "accelerate>=0.30", "lm-format-enforcer>=0.10",
-    "sentencepiece>=0.2",
-    "flash-linear-attention>=0.5",
-    # ponytail: wheel-pinned below in [tool.uv.sources], so scoped to this box's profile
-    "flash-attn; python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "causal-conv1d; python_version == '3.12' and sys_platform == 'linux' and platform_machine == 'x86_64'",
-]
 tools = ["python-dotenv>=1.0", "requests>=2.32", "pyyaml>=6.0", "lingua-language-detector>=2.0"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
@@ -34,13 +27,3 @@ packages = ["agents", "llm", "tools", "storage", "utils"]
 asyncio_mode = "auto"
 # Put the project root on sys.path so tests can import the bare top-level modules.
 pythonpath = ["."]
-
-[tool.uv.extra-build-dependencies]
-flash-attn = ["torch"]
-
-# Prebuilt flash-attn wheel matching torch 2.12 + cu130 + cp312 (RTX 3090 box).
-# Bump the URL when torch is upgraded: https://github.com/mjun0812/flash-attention-prebuild-wheels
-[tool.uv.sources]
-flash-attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.9.17/flash_attn-2.8.3%2Bcu130torch2.12-cp312-cp312-linux_x86_64.whl" }
-# torch2.10 build; ABI-compatible with torch 2.12 (kernel smoke-tested). No 2.12 wheel published yet.
-causal-conv1d = { url = "https://github.com/Dao-AILab/causal-conv1d/releases/download/v1.6.2.post1/causal_conv1d-1.6.2.post1%2Bcu13torch2.10cxx11abiTRUE-cp312-cp312-linux_x86_64.whl" }
