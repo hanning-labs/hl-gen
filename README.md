@@ -1,6 +1,6 @@
 # hl-gen — multi-pipeline text synthesis framework
 
-A closed-loop, multi-agent framework that **generates, scores, and refines text** using local LLMs. Two pipelines ship out of the box:
+A closed-loop, multi-agent framework that **generates, scores, and refines text** using an OpenAI-compatible LLM server (e.g. vLLM). Two pipelines ship out of the box:
 
 | Pipeline | What it produces | Entry point |
 |---|---|---|
@@ -40,10 +40,10 @@ Every agent role maps to a base class in `agents/base.py`. Shared logic (`score(
 ## Quick start
 
 ```bash
-pip install -e ".[dev,local,tools]"
+pip install -e ".[dev,tools]"
 ```
 
-For a runnable single-request example see `examples/run_local.py`. Request shapes are defined in `config.py` (`SynthesisRequest`) and `config_topics.py` (`TopicsRequest`).
+For a runnable example see `examples/run_batch.py`. Request shapes are defined in `config.py` (`SynthesisRequest`) and `config_topics.py` (`TopicsRequest`).
 
 ### Batch run
 
@@ -52,29 +52,27 @@ python examples/run_batch.py configs/default.yaml          # code-switching
 python examples/run_topics_batch.py configs/topics_default.yaml   # topics
 ```
 
-Both runners resume from partial output, auto-detect GPU concurrency (~1 pipeline per 8 GB VRAM), and write a performance profile to `<output>/profile_*.json`.
+Both runners resume from partial output, run up to `max_concurrent` pipelines at once (default 8 — the server's continuous batching absorbs bursts), and write a performance profile to `<output>/profile_*.json`.
 
-### Inference backends
+### Inference
 
-The `client.backend` key in the YAML selects how inference runs:
-
-- **`local`** (default) — in-process HF `transformers` via `LocalClient`. Zero infrastructure; batching/OOM handled client-side.
-- **`openai`** — any OpenAI-compatible server via `OpenAICompatClient` (vLLM recommended; SGLang etc. work identically). Continuous batching, paged KV cache, and OOM handling live server-side.
+Inference runs against any OpenAI-compatible server via `OpenAICompatClient` (vLLM recommended; SGLang etc. work identically). Continuous batching, paged KV cache, and OOM handling live server-side.
 
 ```bash
 scripts/serve_vllm.sh                                # serve on the local GPU (own venv, one-time install)
 python examples/run_batch.py configs/default_vllm.yaml
 ```
 
-The server runs in its own venv/Docker, so its torch pin never conflicts with the app environment (see `docs/vllm_scoping.md`). To run against a VM, start the server there and set `client.base_url: http://<vm>:8000/v1` — nothing else changes.
+The server runs in its own venv/Docker, so its torch pin never conflicts with the app environment. To run against a VM, start the server there and set `client.base_url: http://<vm>:8000/v1` — nothing else changes.
 
-### News grounding (Currents API)
+### News grounding (Currents + NewsAPI)
 
 ```bash
 echo "CURRENTS_API_KEY=your_key" >> .env
+echo "NEWS_API_KEY=your_key" >> .env
 ```
 
-Pass `tools=[CurrentsTool()]` to either builder (see `tools/currents.py`). The `ArticleSelector` agent picks the most relevant article and proposes a framing before generation.
+Pass `tools=[CurrentsTool(), NewsAPITool()]` to either builder (see `tools/currents.py`, `tools/newsapi.py`). Tools are fetched concurrently, and the `ArticleSelector` agent picks the most relevant article across their results and proposes a framing before generation.
 
 ---
 
@@ -121,9 +119,9 @@ All agents inherit `_complete_with_retry()`: calls the LLM, parses JSON, retries
 
 ## Config reference
 
-Full field definitions live in `batch.py` (`BatchConfig`, `LocalClientConfig`, `OpenAIClientConfig`) and `config_topics.py` (`TopicsBatchConfig`). Working examples: `configs/default.yaml`, `configs/default_vllm.yaml`, and `configs/topics_default.yaml`.
+Full field definitions live in `batch.py` (`BatchConfig`, `OpenAIClientConfig`) and `config_topics.py` (`TopicsBatchConfig`). Working examples: `configs/default.yaml`, `configs/default_vllm.yaml`, and `configs/topics_default.yaml`.
 
-**Shared keys** (both pipelines): `n`, `output` (base artifacts directory), `run_name` (subdirectory of `output` holding this run's `samples.jsonl` + `profile_*.json`), `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`, `client` (discriminated on `backend`: `local` → model, device, dtype, max\_new\_tokens, max\_batch\_size, compile\_model; `openai` → base\_url, model, max\_new\_tokens, timeout).
+**Shared keys** (both pipelines): `n`, `output` (base artifacts directory), `run_name` (subdirectory of `output` holding this run's `samples.jsonl` + `profile_*.json`), `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`, `client` (`backend: openai` → base\_url, model, max\_new\_tokens, api\_key, timeout).
 
 **Code-switching only**: `language_pairs`, `cs_types`, `cs_functions`, `cs_ratio_min/max`, `age_min/max`, `genders`, `conversation_types`.
 
@@ -143,7 +141,10 @@ To use a different backend, implement the `SampleStore` protocol in `storage/bas
 
 ## Tools
 
-`CurrentsTool` (see `tools/currents.py`) fetches news from the Currents API and returns articles under `tool_context["currents_api"]`. Constructor accepts `api_key`, `max_articles`, `language`, `categories`, and `news_types`.
+Two news providers ship, both taking `api_key`, `max_articles`, `language`, `categories`, and `news_types` in their constructors:
+
+- `CurrentsTool` (see `tools/currents.py`) — Currents API; results under `tool_context["currents_api"]`.
+- `NewsAPITool` (see `tools/newsapi.py`) — NewsAPI.org; results under `tool_context["newsapi"]`.
 
 To add a tool, implement the `ToolProvider` protocol in `tools/base.py`: a `name` attribute and an async `fetch(ctx) -> dict`. Multiple tools are fetched concurrently; each result is keyed by `tool.name` in `tool_context`.
 
@@ -152,14 +153,12 @@ To add a tool, implement the `ToolProvider` protocol in `tools/base.py`: a `name
 ## Dev
 
 ```bash
-pip install -e ".[dev,local,tools]"
-pytest tests/                          # unit tests, mock agents, no LLM
-python examples/run_local.py           # live end-to-end smoke run
+pip install -e ".[dev,tools]"
+pytest tests/                                              # unit tests, mock agents, no LLM
+python examples/run_batch.py configs/default_vllm.yaml     # live smoke run (needs a running server)
 ```
 
-**Logging** — key loggers: `orchestrator`, `agents.base`, `agents.generation`, `agents.scorers`, `llm.local`, `batch`. Run scripts configure `basicConfig(level=INFO)`.
-
-**OOM recovery** — `LocalClient` catches `torch.cuda.OutOfMemoryError`, clears the CUDA cache, and retries once before raising.
+**Logging** — key loggers: `orchestrator`, `agents.base`, `batch`. Run scripts configure `basicConfig(level=INFO)`.
 
 ## Boundaries
 
