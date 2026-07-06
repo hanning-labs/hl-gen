@@ -21,6 +21,7 @@ news_types:
   - articles
 
 client:
-  model: Qwen/Qwen2.5-7B-Instruct
+  backend: openai
+  base_url: http://localhost:8000/v1
+  model: AxionML/Qwen3.5-9B-NVFP4
   max_new_tokens: 1024
-  max_batch_size: 1

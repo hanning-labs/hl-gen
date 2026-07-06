@@ -176,7 +176,14 @@ class DimensionScorer(ScorerAgent):
                     raise PromptParseError(f"{name}: missing criterion {k!r} in model reply")
             return data
 
-        data = await self._complete_with_retry(as_user(self._format_prompt(sample)), system=self.system, validate=_validate)
+        schema = {
+            "type": "object",
+            "properties": {**{k: {"type": "boolean"} for k in criteria}, "notes": {"type": "string"}},
+            "required": list(criteria),
+        }
+        data = await self._complete_with_retry(
+            as_user(self._format_prompt(sample)), system=self.system, validate=_validate, json_schema=schema
+        )
         passed = sum(bool(data[k]) for k in self.criteria)
         score = passed / len(self.criteria) * 10
         log.debug("%s score=%.1f (%d/%d)", self.name, score, passed, len(self.criteria))
@@ -208,7 +215,17 @@ class RefinerBase(EditorAgent):
                 raise PromptParseError(f"{name}: expected a JSON object, got {type(data).__name__}")
             return data
 
-        data = await self._complete_with_retry(as_user(self._fill_prompt(sample, report)), system=_REFINER_SYSTEM, validate=_validate)
+        schema = {
+            "type": "object",
+            "properties": {
+                "failures": {"type": "array", "items": {"type": "string"}},
+                "suggestions": {"type": "string"},
+            },
+            "required": ["failures", "suggestions"],
+        }
+        data = await self._complete_with_retry(
+            as_user(self._fill_prompt(sample, report)), system=_REFINER_SYSTEM, validate=_validate, json_schema=schema
+        )
 
         # RefinementFeedback is transient, so the trace lives on the sample —
         # one entry per refinement round.

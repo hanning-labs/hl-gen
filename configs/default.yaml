@@ -7,13 +7,10 @@ run_name: article_selector
 seed: 36
 
 client:
-    model: Qwen/Qwen2.5-7B-Instruct   # any HF model id
-    device: cuda                        # null → auto (cuda/mps/cpu)
-    dtype: bfloat16                         # auto | float16 | bfloat16
+    backend: openai
+    base_url: http://localhost:8000/v1   # point at a VM to run remotely
+    model: AxionML/Qwen3.5-9B-NVFP4      # must match what the server is serving
     max_new_tokens: 1024
-    max_batch_size: 4                   # set >1 to enable batching (e.g. 4 or 8)
-    batch_timeout_sec: 0.02             # seconds to wait for a batch to fill
-    compile_model: true                 # torch.compile — first batch slow, all subsequent faster
 score_threshold: 8.0
 max_refinement_rounds: 3
 # max_concurrent: 2   # omit to auto-detect from GPU VRAM (~1 per 8 GB)
