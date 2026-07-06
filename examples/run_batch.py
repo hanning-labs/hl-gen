@@ -12,7 +12,7 @@ invocation. If ``samples.jsonl`` already contains accepted samples the run
 resumes from where it left off — only the remaining ``n - already_accepted``
 attempts are made.
 
-All knobs (model, device, dtype, seed, concurrency, …) live in the YAML config.
+All knobs (client base_url/model, seed, concurrency, …) live in the YAML config.
 See configs/default.yaml for the full reference.
 """
 

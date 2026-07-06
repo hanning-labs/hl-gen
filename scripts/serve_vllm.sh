@@ -2,9 +2,9 @@
 # Serve a model behind an OpenAI-compatible endpoint with vLLM.
 #
 # vLLM lives in its own venv so its torch pin never touches the app venv
-# (this is what makes the migration work on the cu130/torch-2.12 box — see
-# docs/vllm_scoping.md). The same script works on the local 3090 or any CUDA
-# VM; point the batch config's client.base_url at wherever this runs.
+# (this is what makes the migration work on the cu130/torch-2.12 box). The same
+# script works on the local 3090 or any CUDA VM; point the batch config's
+# client.base_url at wherever this runs.
 #
 # Usage:
 #   scripts/serve_vllm.sh [MODEL] [extra vllm serve args...]
