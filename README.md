@@ -13,25 +13,7 @@ Both share the same closed loop, agent role hierarchy, storage layer, and tool i
 
 ## The loop
 
-```
-Tool providers (CurrentsTool, …)
-        │  fetch()
-        ▼
-ArticleSelector  ──►  GenerationAgent
-                             │  generate()
-                             ▼
-             ┌── Scorers (concurrent) ──┐
-             │  score() × N dimensions  │
-             └──────────────────────────┘
-                             │
-                        SummarizeAgent
-                        (S_final = weighted mean)
-                             │
-                    score >= threshold?
-                      ├─ yes ──► AcceptanceAgent ──► SampleStore (JSONL)
-                      └─ no  ──► RefinerAgent ──► feedback ──► GenerationAgent
-                                 (up to max_refinement_rounds)
-```
+![The hl-gen closed loop: tool providers fetch() into ArticleSelector, which feeds GenerationAgent; generate() fans out to N concurrent Scorers; SummarizeAgent reduces them to S_final (weighted mean); if score >= threshold the sample goes to AcceptanceAgent and SampleStore (samples.jsonl), otherwise RefinerAgent sends feedback back to GenerationAgent for up to max_refinement_rounds.](docs/loop.png)
 
 Every agent role maps to a base class in `agents/base.py`. Shared logic (`score()`, `refine()`) lives in `DimensionScorer` and `RefinerBase`; pipeline-specific code lives only in prompts and prompt-formatting methods.
 
