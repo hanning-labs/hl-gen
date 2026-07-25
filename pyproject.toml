@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "hl-gen"
 version = "0.1.0"
 description = "Hanning Labs data synthesis framework"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.6",
