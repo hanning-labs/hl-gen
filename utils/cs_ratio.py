@@ -147,7 +147,7 @@ def count_tokens(text: str, l1_lang: str, l2_lang: str) -> tuple[int, int]:
     except ImportError:
         log.error(
             "lingua-language-detector is required for ratio scoring. "
-            "Install with: pip install 'code-switch-data-synthesis[tools]'"
+            "Install with: pip install 'hl-gen[tools]'"
         )
         return 0, 0
 

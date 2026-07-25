@@ -1,8 +1,9 @@
 """Persistence interface for accepted samples.
 
-The :class:`~agents.acceptance.AcceptanceAgent`
-(the pipeline Sink) writes here. Concrete stores (filesystem, DB, the planned
-audio corpus DB) implement this protocol in a later pass.
+The :class:`~agents.acceptance.AcceptanceAgent` (the pipeline Sink) writes here.
+:class:`~storage.file_store.FileSampleStore` is the shipped implementation
+(append-only JSONL); further stores (DB, the planned audio corpus DB) implement
+this same protocol.
 """
 
 from __future__ import annotations

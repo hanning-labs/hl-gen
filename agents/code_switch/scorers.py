@@ -54,10 +54,17 @@ class NaturalnessAgent(_CSDimensionScorer):
 
 
 class CSRatioAgent(ScorerAgent):
-    """Checks whether the token-level language ratio matches the user target.
+    """Scores L2 *presence* — that the sample actually code-switches at all.
 
-    Deterministic: uses Unicode script ranges to count tokens per language —
+    Deterministic: counts tokens per language and scores off the L2 count —
     no LLM call, no parse retries, no hallucinated counts.
+
+    **This does not enforce the requested ratio.** Despite the name,
+    ``request.code_switching.ratio`` is never compared against; the score is
+    ``min(l2_count * 5, 10)`` (see :func:`~utils.cs_ratio.l2_presence_score`),
+    so two L2 tokens is a full score regardless of the target. It catches the
+    common failure — a "code-switched" sample that is monolingual — and nothing
+    finer. Enforcing the ratio itself is future work.
     """
 
     name = "CSRatioAgent"

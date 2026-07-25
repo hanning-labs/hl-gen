@@ -1,8 +1,9 @@
 """Provider-agnostic LLM client interface.
 
 Agents code against the :class:`LLMClient` protocol rather than any concrete
-SDK, so the backend (Claude, others) stays swappable. The reference backend is
-:class:`~llm.claude.ClaudeClient`.
+SDK, so the backend stays swappable. The reference backend is
+:class:`~llm.openai_compat.OpenAICompatClient`, which targets any
+OpenAI-compatible server (vLLM, SGLang, …).
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """Control-flow tests for SynthesisPipeline using mock agents.
 
-These exercise the orchestrator loop independently of the (unimplemented) real
-agent bodies: the first-round accept path, the refine-then-accept path, and the
-exhausted-rounds path. Run with: ``pytest`` (needs the ``dev`` extra).
+These exercise the orchestrator loop in isolation from the real agent bodies —
+no LLM is called: the first-round accept path, the refine-then-accept path, and
+the exhausted-rounds path. Run with: ``pytest`` (needs the ``dev`` extra).
 """
 
 from __future__ import annotations
