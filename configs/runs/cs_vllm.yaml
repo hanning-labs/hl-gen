@@ -1,0 +1,20 @@
+# Code-switch batch synthesis against a vLLM (or any OpenAI-compatible) server.
+# Start the server first:  scripts/serve_vllm.sh
+# Then run:                python examples/run_batch.py configs/runs/cs_vllm.yaml
+n: 10
+output: out/batch
+run_name: vllm
+seed: 36
+score_threshold: 8.0
+max_refinement_rounds: 3
+
+api: all
+linguistics: code_switch
+
+# Inline client block: like client/local_vllm.yaml but with more headroom —
+# the thinking trace precedes the answer.
+client:
+  backend: openai
+  base_url: http://localhost:8000/v1
+  model: AxionML/Qwen3.5-9B-NVFP4
+  max_new_tokens: 4096

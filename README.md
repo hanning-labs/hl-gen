@@ -48,8 +48,8 @@ For a runnable example see `examples/run_batch.py`. Request shapes are defined i
 ### Batch run
 
 ```bash
-python examples/run_batch.py configs/default.yaml          # code-switching
-python examples/run_topics_batch.py configs/topics_default.yaml   # topics
+python examples/run_batch.py configs/runs/cs_default.yaml               # code-switching
+python examples/run_topics_batch.py configs/runs/topics_default.yaml    # topics
 ```
 
 Both runners resume from partial output, run up to `max_concurrent` pipelines at once (default 8 — the server's continuous batching absorbs bursts), and write a performance profile to `<output>/profile_*.json`.
@@ -60,7 +60,7 @@ Inference runs against any OpenAI-compatible server via `OpenAICompatClient` (vL
 
 ```bash
 scripts/serve_vllm.sh                                # serve on the local GPU (own venv, one-time install)
-python examples/run_batch.py configs/default_vllm.yaml
+python examples/run_batch.py configs/runs/cs_vllm.yaml
 ```
 
 The server runs in its own venv/Docker, so its torch pin never conflicts with the app environment. To run against a VM, start the server there and set `client.base_url: http://<vm>:8000/v1` — nothing else changes.
@@ -119,15 +119,17 @@ All agents inherit `_complete_with_retry()`: calls the LLM, parses JSON, retries
 
 ## Config reference
 
-Full field definitions live in `batch.py` (`BatchConfig`, `OpenAIClientConfig`) and `config_topics.py` (`TopicsBatchConfig`). Working examples: `configs/default.yaml`, `configs/default_vllm.yaml`, and `configs/topics_default.yaml`.
+Configuration is composed from four groups. A run config (`configs/runs/*.yaml`) holds the **pipeline settings** flat at the top level, plus one entry per group — each either the bare name of a variant file (`api: currents` → `configs/api/currents.yaml`) or an inline mapping. `run_config.compose_run_config()` resolves the references; the pipeline's root model validates the result.
 
-**Shared keys** (both pipelines): `n`, `output` (base artifacts directory), `run_name` (subdirectory of `output` holding this run's `samples.jsonl` + `profile_*.json`), `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`, `client` (`backend: openai` → base\_url, model, max\_new\_tokens, api\_key, timeout).
+Full field definitions live in `run_config.py` (group models), `batch.py` (`BatchConfig`), and `config_topics.py` (`TopicsBatchConfig`). Working examples: everything under `configs/runs/`.
 
-**Code-switching only**: `language_pairs`, `cs_types`, `cs_functions`, `cs_ratio_min/max`, `age_min/max`, `genders`, `conversation_types`.
+**Pipeline settings** (flat, both pipelines): `n`, `output` (base artifacts directory), `run_name` (subdirectory of `output` holding this run's `samples.jsonl` + `profile_*.json`), `seed`, `score_threshold`, `max_refinement_rounds`, `max_concurrent`.
 
-**Topics only**: `styles`, `perspectives`, `tenses`.
+**`client` group** (`configs/client/`): `backend: openai` → `base_url`, `model`, `max_new_tokens`, `api_key`, `timeout`.
 
-**CurrentsTool filters** (both): `categories`, `news_types`.
+**`api` group** (`configs/api/`): `sources` (which news tools to use), `categories` (news filter — also the topic pool requests sample from), `news_types`, `max_articles`.
+
+**`linguistics` group** (`configs/linguistics/`): code-switching — `language_pairs`, `cs_types`, `cs_functions`, `cs_ratio_min/max`, `age_min/max`, `genders`, `perspectives`, `tenses`, `conversation_types`; topics — `styles`, `perspectives`, `tenses`.
 
 ---
 
@@ -155,7 +157,7 @@ To add a tool, implement the `ToolProvider` protocol in `tools/base.py`: a `name
 ```bash
 pip install -e ".[dev,tools]"
 pytest tests/                                              # unit tests, mock agents, no LLM
-python examples/run_batch.py configs/default_vllm.yaml     # live smoke run (needs a running server)
+python examples/run_batch.py configs/runs/cs_vllm.yaml     # live smoke run (needs a running server)
 ```
 
 **Logging** — key loggers: `orchestrator`, `agents.base`, `batch`. Run scripts configure `basicConfig(level=INFO)`.

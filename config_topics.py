@@ -6,7 +6,7 @@ import random
 
 from pydantic import BaseModel, Field
 
-from batch import OpenAIClientConfig
+from run_config import APIConfig, ClientConfig, TopicsLinguistics
 
 
 class TopicsRequest(BaseModel):
@@ -21,7 +21,11 @@ class TopicsRequest(BaseModel):
 
 
 class TopicsBatchConfig(BaseModel):
-    """Configuration for a batch topics synthesis run, loaded from YAML."""
+    """Configuration for a batch topics synthesis run, composed from a run-config YAML.
+
+    Pipeline settings live flat at the top level; the ``api``, ``client`` and
+    ``linguistics`` groups are composed via :func:`run_config.compose_run_config`.
+    """
 
     n: int = Field(10, ge=1, description="Total number of samples to attempt.")
     max_concurrent: int | None = Field(None, description="Max concurrent pipelines. None → batch.DEFAULT_MAX_CONCURRENT.")
@@ -33,38 +37,26 @@ class TopicsBatchConfig(BaseModel):
         "default",
         description="Subdirectory of `output` holding this run's samples.jsonl + profile_*.json.",
     )
-    client: OpenAIClientConfig = Field(default_factory=OpenAIClientConfig)
     seed: int | None = Field(None, description="RNG seed for reproducible request sampling.")
     score_threshold: float = 8.0
     max_refinement_rounds: int = Field(3, ge=1)
 
-    styles: list[str] = Field(
-        default_factory=lambda: ["news summary", "opinion", "explainer", "listicle"]
-    )
-    perspectives: list[str] = Field(default_factory=lambda: ["third-person"])
-    tenses: list[str] = Field(default_factory=lambda: ["present"])
-    categories: list[str] = Field(
-        default_factory=lambda: [
-            "general", "society", "science_technology", "politics_government",
-            "economy_business_finance", "arts_culture_entertainment", "lifestyle_leisure",
-            "human_interest", "sport", "crime_law_justice", "education",
-            "environment", "labour", "health",
-        ]
-    )
-    news_types: list[str] = Field(default_factory=lambda: ["news", "articles", "discussion"])
-    sources: list[str] = Field(
-        default_factory=lambda: ["currents", "newsapi"],
-        description="News tool providers to ground generation. Subset of {'currents', 'newsapi'}.",
-    )
+    client: ClientConfig = Field(default_factory=ClientConfig)
+    api: APIConfig = Field(default_factory=APIConfig)
+    linguistics: TopicsLinguistics = Field(default_factory=TopicsLinguistics)
 
 
 def sample_topics_request(config: TopicsBatchConfig, rng: random.Random) -> TopicsRequest:
-    """Randomly draw one TopicsRequest from the config's parameter ranges."""
+    """Randomly draw one TopicsRequest from the config's parameter ranges.
+
+    ``topic`` is drawn from ``config.api.categories`` — the news-API filter
+    taxonomy doubles as the topic pool.
+    """
     return TopicsRequest(
-        topic=rng.choice(config.categories),
-        style=rng.choice(config.styles),
-        perspective=rng.choice(config.perspectives),
-        tense=rng.choice(config.tenses),
+        topic=rng.choice(config.api.categories),
+        style=rng.choice(config.linguistics.styles),
+        perspective=rng.choice(config.linguistics.perspectives),
+        tense=rng.choice(config.linguistics.tenses),
         score_threshold=config.score_threshold,
         max_refinement_rounds=config.max_refinement_rounds,
     )

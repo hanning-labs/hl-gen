@@ -1,0 +1,23 @@
+# Ground generation only in the Currents API.
+sources: [currents]
+max_articles: 30
+
+categories:
+  - general
+  - society
+  - science_technology
+  - politics_government
+  - economy_business_finance
+  - arts_culture_entertainment
+  - lifestyle_leisure
+  - human_interest
+  - sport
+  - crime_law_justice
+  - education
+  - environment
+  - labour
+  - health
+  - automotive
+  - real_estate
+
+news_types: [news, articles, discussion]

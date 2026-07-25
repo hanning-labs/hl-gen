@@ -1,0 +1,15 @@
+# Sampling ranges for English-topic prose (TopicsBatchConfig.linguistics).
+styles:
+  - conversational
+  - opinion
+  - explainer, casual
+
+perspectives:
+  - third-person
+  - first-person
+  - second-person
+
+tenses:
+  - present
+  - past
+  - future

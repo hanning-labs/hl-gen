@@ -1,0 +1,13 @@
+# Default code-switch batch synthesis run.
+# Run with:  python examples/run_batch.py configs/runs/cs_default.yaml
+n: 10
+output: out/batch
+run_name: article_selector
+seed: 36
+score_threshold: 8.0
+max_refinement_rounds: 3
+# max_concurrent: 8   # omit for the default of 8; raise freely, server absorbs bursts
+
+api: all                  # → configs/api/all.yaml
+client: local_vllm        # → configs/client/local_vllm.yaml
+linguistics: code_switch  # → configs/linguistics/code_switch.yaml

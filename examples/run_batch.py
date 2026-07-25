@@ -2,9 +2,10 @@
 
 Usage
 -----
-    python examples/run_batch.py configs/default.yaml
+    python examples/run_batch.py configs/runs/cs_default.yaml
 
-Reads the YAML config, randomly samples ``n`` SynthesisRequests, and runs
+Reads the run config (composing its api/client/linguistics group references —
+see run_config.compose_run_config), randomly samples ``n`` SynthesisRequests, and runs
 them concurrently. Accepted samples are written to
 ``<output>/<run_name>/samples.jsonl``, and a performance profile snapshot is
 written to ``<output>/<run_name>/profile_<timestamp>.json`` after each
@@ -13,7 +14,7 @@ resumes from where it left off — only the remaining ``n - already_accepted``
 attempts are made.
 
 All knobs (client base_url/model, seed, concurrency, …) live in the YAML config.
-See configs/default.yaml for the full reference.
+See configs/runs/cs_default.yaml for the full reference.
 """
 
 from __future__ import annotations
@@ -26,14 +27,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import yaml
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from batch import DEFAULT_MAX_CONCURRENT, BatchConfig, BatchRun, count_existing, make_client, run_batch
 from orchestrator import build_default_pipeline
+from run_config import compose_run_config
 from storage.file_store import FileSampleStore
 from tools.currents import CurrentsTool
 from tools.newsapi import NewsAPITool
@@ -85,8 +85,7 @@ def _write_profile(
 
 
 async def main(config_path: str) -> None:
-    with open(config_path) as f:
-        config = BatchConfig.model_validate(yaml.safe_load(f))
+    config = BatchConfig.model_validate(compose_run_config(config_path))
 
     run_dir = Path(config.output) / config.run_name
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -110,10 +109,16 @@ async def main(config_path: str) -> None:
 
     llm = make_client(config.client)
     store = FileSampleStore(samples_path)
-    pipeline = build_default_pipeline(llm, store, tools=[
-        CurrentsTool(categories=config.categories, news_types=config.news_types),
-        NewsAPITool(categories=config.categories, news_types=config.news_types),
-    ])
+    _tool_factories = {"currents": CurrentsTool, "newsapi": NewsAPITool}
+    tools = [
+        _tool_factories[s](
+            categories=config.api.categories,
+            news_types=config.api.news_types,
+            max_articles=config.api.max_articles,
+        )
+        for s in config.api.sources
+    ]
+    pipeline = build_default_pipeline(llm, store, tools=tools)
 
     effective = config.model_copy(update={"n": remaining})
     batch_run = await run_batch(effective, pipeline, seed=config.seed)

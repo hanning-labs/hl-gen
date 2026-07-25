@@ -1,0 +1,14 @@
+# Ground generation only in NewsAPI.org articles (NewsAPI category taxonomy).
+sources: [newsapi]
+max_articles: 10
+
+categories:
+  - health
+  - business
+  - entertainment
+  - general
+  - science
+  - sports
+  - technology
+
+news_types: [news, articles, discussion]

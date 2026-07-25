@@ -1,0 +1,21 @@
+# Single-sample debug run for the topics pipeline.
+# Run with:  python examples/run_topics_batch.py configs/runs/topics_debug.yaml
+n: 1
+output: out/topics
+run_name: debug
+score_threshold: 7.0
+max_refinement_rounds: 2
+max_concurrent: 1
+
+client: local_vllm    # → configs/client/local_vllm.yaml
+
+# Inline groups: minimal fixed draw for debugging.
+api:
+  max_articles: 10
+  news_types: [articles]
+  categories: [science_technology]
+
+linguistics:
+  styles: [conversational]
+  perspectives: [third-person]
+  tenses: [present]

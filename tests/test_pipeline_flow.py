@@ -133,6 +133,28 @@ def test_openai_client_config_model_dump_matches_client_signature() -> None:
     assert cfg_keys == sig_params
 
 
+def test_compose_run_config_resolves_groups(tmp_path) -> None:
+    """String group refs load configs/<group>/<name>.yaml; inline mappings pass through."""
+    from run_config import compose_run_config
+
+    (tmp_path / "api").mkdir()
+    (tmp_path / "client").mkdir()
+    (tmp_path / "runs").mkdir()
+    (tmp_path / "api" / "currents.yaml").write_text("sources: [currents]\ncategories: [sport]\n")
+    (tmp_path / "client" / "local.yaml").write_text("model: Qwen/Qwen2.5-14B-Instruct\n")
+    run = tmp_path / "runs" / "run.yaml"
+    run.write_text(
+        "n: 5\napi: currents\nclient: local\nlinguistics:\n  perspectives: [first-person]\n"
+    )
+
+    cfg = BatchConfig.model_validate(compose_run_config(run))
+    assert cfg.n == 5
+    assert cfg.api.sources == ["currents"]
+    assert cfg.api.categories == ["sport"]
+    assert cfg.client.model == "Qwen/Qwen2.5-14B-Instruct"
+    assert cfg.linguistics.perspectives == ["first-person"]
+
+
 def make_request(*, threshold: float = 8.0, max_rounds: int = 3) -> SynthesisRequest:
     """A concrete Cantonese-L1 / English-L2 'Movie' request (cf. the diagram)."""
     return SynthesisRequest(

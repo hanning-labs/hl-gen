@@ -13,14 +13,12 @@ import logging
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Literal
 
 log = logging.getLogger(__name__)
 
 from pydantic import BaseModel, Field
 
 from llm import LLMClient, OpenAICompatClient
-from llm.openai_compat import DEFAULT_BASE_URL, DEFAULT_MAX_NEW_TOKENS, DEFAULT_MODEL
 from config import (
     BasicSetting,
     CharacterSetting,
@@ -30,31 +28,24 @@ from config import (
 )
 from models import CSSample
 from orchestrator import SynthesisPipeline
+from run_config import APIConfig, ClientConfig, CodeSwitchLinguistics
 from storage.file_store import FileSampleStore
 
-
-class OpenAIClientConfig(BaseModel):
-    """OpenAICompatClient construction parameters, embeddable in a YAML batch config.
-
-    Points at any OpenAI-compatible server (vLLM, SGLang, …) — local or on a
-    remote VM. Batching/OOM knobs live server-side, so there are none here.
-    """
-
-    backend: Literal["openai"] = "openai"
-    base_url: str = Field(DEFAULT_BASE_URL, description="Server endpoint, e.g. http://<vm>:8000/v1.")
-    model: str = Field(DEFAULT_MODEL, description="Model id as the server knows it.")
-    max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS
-    api_key: str = Field("EMPTY", description="Bearer token; local vLLM/SGLang servers ignore it.")
-    timeout: float = Field(600.0, description="Per-request timeout in seconds.")
+#: Backwards-compatible alias; the model now lives in run_config.
+OpenAIClientConfig = ClientConfig
 
 
-def make_client(config: OpenAIClientConfig) -> LLMClient:
+def make_client(config: ClientConfig) -> LLMClient:
     """Instantiate the LLM client from its YAML-embeddable config."""
     return OpenAICompatClient(**config.model_dump(exclude={"backend"}))
 
 
 class BatchConfig(BaseModel):
-    """Configuration for a batch synthesis run, loaded from a YAML file."""
+    """Configuration for a batch synthesis run, composed from a run-config YAML.
+
+    Pipeline settings live flat at the top level; the ``api``, ``client`` and
+    ``linguistics`` groups are composed via :func:`run_config.compose_run_config`.
+    """
 
     n: int = Field(10, ge=1, description="Total number of samples to attempt.")
     max_concurrent: int | None = Field(
@@ -69,48 +60,13 @@ class BatchConfig(BaseModel):
         description="Subdirectory of `output` holding this run's samples.jsonl + profile_*.json. "
                      "Reused across invocations to resume an in-progress run.",
     )
-    client: OpenAIClientConfig = Field(default_factory=OpenAIClientConfig)
     seed: int | None = Field(None, description="RNG seed for reproducible request sampling.")
     score_threshold: float = 7.0
     max_refinement_rounds: int = Field(3, ge=1)
 
-    # code_switching ranges
-    cs_types: list[str] = Field(
-        default_factory=lambda: [t.value for t in CodeSwitchType],
-        description="CodeSwitchType values to draw from.",
-    )
-    cs_functions: list[str] = Field(
-        default_factory=lambda: ["expressive", "quotation", "emphasis", "clarification"]
-    )
-    cs_ratio_min: float = Field(0.2, ge=0.0, le=1.0)
-    cs_ratio_max: float = Field(0.5, ge=0.0, le=1.0)
-
-    # character ranges
-    language_pairs: list[list[str]] = Field(
-        default_factory=lambda: [["Cantonese", "English"]],
-        description="List of [L1, L2] pairs to draw from.",
-    )
-    age_min: int = Field(18, ge=0)
-    age_max: int = Field(60, ge=0)
-    genders: list[str] = Field(default_factory=lambda: ["male", "female", "non-binary"])
-
-    # basic ranges
-    perspectives: list[str] = Field(default_factory=lambda: ["first-person", "third-person"])
-    tenses: list[str] = Field(default_factory=lambda: ["past", "present", "future"])
-    conversation_types: list[str] = Field(
-        default_factory=lambda: ["casual chat", "formal discussion", "debate", "storytelling"]
-    )
-
-    # currents API filters
-    categories: list[str] = Field(
-        default_factory=lambda: [
-            "general", "society", "science_technology", "politics_government",
-            "economy_business_finance", "arts_culture_entertainment", "lifestyle_leisure",
-            "human_interest", "sport", "crime_law_justice", "education",
-            "environment", "labour", "health", "automotive", "real_estate",
-        ]
-    )
-    news_types: list[str] = Field(default_factory=lambda: ["news", "articles", "discussion"])
+    client: ClientConfig = Field(default_factory=ClientConfig)
+    api: APIConfig = Field(default_factory=APIConfig)
+    linguistics: CodeSwitchLinguistics = Field(default_factory=CodeSwitchLinguistics)
 
 
 #: Default in-flight pipeline cap; raise via ``max_concurrent`` in the YAML.
@@ -120,25 +76,30 @@ DEFAULT_MAX_CONCURRENT = 8
 
 
 def sample_request(config: BatchConfig, rng: random.Random) -> SynthesisRequest:
-    """Randomly draw one ``SynthesisRequest`` from the config's parameter ranges."""
-    pair = rng.choice(config.language_pairs)
+    """Randomly draw one ``SynthesisRequest`` from the config's parameter ranges.
+
+    ``topic`` is drawn from ``config.api.categories`` — the news-API filter
+    taxonomy doubles as the topic pool.
+    """
+    ling = config.linguistics
+    pair = rng.choice(ling.language_pairs)
     return SynthesisRequest(
         code_switching=CodeSwitchingSpec(
-            type=CodeSwitchType(rng.choice(config.cs_types)),
-            function=rng.choice(config.cs_functions),
-            ratio=round(rng.uniform(config.cs_ratio_min, config.cs_ratio_max), 3),
+            type=CodeSwitchType(rng.choice(ling.cs_types)),
+            function=rng.choice(ling.cs_functions),
+            ratio=round(rng.uniform(ling.cs_ratio_min, ling.cs_ratio_max), 3),
         ),
         character=CharacterSetting(
             first_language=pair[0],
             second_language=pair[1],
-            age=rng.randint(config.age_min, config.age_max),
-            gender=rng.choice(config.genders),
+            age=rng.randint(ling.age_min, ling.age_max),
+            gender=rng.choice(ling.genders),
         ),
         basic=BasicSetting(
-            perspective=rng.choice(config.perspectives),
-            tense=rng.choice(config.tenses),
-            topic=rng.choice(config.categories),
-            conversation_type=rng.choice(config.conversation_types),
+            perspective=rng.choice(ling.perspectives),
+            tense=rng.choice(ling.tenses),
+            topic=rng.choice(config.api.categories),
+            conversation_type=rng.choice(ling.conversation_types),
         ),
         score_threshold=config.score_threshold,
         max_refinement_rounds=config.max_refinement_rounds,

@@ -1,0 +1,18 @@
+# Sampling ranges for code-switched speech (BatchConfig.linguistics).
+cs_types: [intra_sentential, inter_sentential, tag]
+cs_functions: [expressive, quotation, emphasis, clarification]
+cs_ratio_min: 0.2
+cs_ratio_max: 0.5
+
+language_pairs:
+  - [Cantonese, English]
+  - [Spanish, English]
+  - [Mandarin, English]
+
+age_min: 18
+age_max: 60
+genders: [male, female, non-binary]
+
+perspectives: [first-person, third-person]
+tenses: [past, present, future]
+conversation_types: [casual chat, formal discussion, debate, storytelling]
