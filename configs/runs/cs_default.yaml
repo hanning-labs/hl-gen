@@ -1,6 +1,6 @@
 # Default code-switch batch synthesis run.
 # Run with:  python examples/run_batch.py configs/runs/cs_default.yaml
-n: 10
+n: 1
 output: out/batch
 run_name: article_selector
 seed: 36

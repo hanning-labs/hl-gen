@@ -17,4 +17,4 @@ client:
   backend: openai
   base_url: http://localhost:8000/v1
   model: AxionML/Qwen3.5-9B-NVFP4
-  max_new_tokens: 4096
+  max_new_tokens: 32768 
