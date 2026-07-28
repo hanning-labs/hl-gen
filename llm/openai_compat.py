@@ -10,11 +10,14 @@ HTTP call.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from openai import AsyncOpenAI
 
 from .base import LLMResponse, Message
+
+log = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "http://localhost:8000/v1"
 DEFAULT_MODEL = "AxionML/Qwen3.5-9B-NVFP4"
@@ -104,6 +107,13 @@ class OpenAICompatClient:
             reasoning, _, text = text.partition("</think>")
             reasoning = reasoning.removeprefix("<think>").strip()
             text = text.strip()
+
+        if not text and response.choices[0].finish_reason == "length":
+            log.warning(
+                "OpenAICompatClient: completion truncated at max_tokens=%d before any "
+                "content was emitted (finish_reason=length) — raise max_new_tokens",
+                request["max_tokens"],
+            )
 
         usage: dict[str, Any] = {}
         if response.usage is not None:
