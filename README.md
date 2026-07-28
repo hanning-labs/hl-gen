@@ -9,6 +9,8 @@ A closed-loop, multi-agent framework that **generates, scores, and refines text*
 
 Both share the same closed loop, agent role hierarchy, storage layer, and tool infrastructure. Adding a third pipeline means writing prompts and subclassing four base classes.
 
+[![Write-up — work/hl-gen](https://img.shields.io/badge/write--up-hanninglabs.com%2Fwork%2Fhl--gen-cf8b57?style=flat-square&labelColor=1c2126)](https://hanninglabs.com/work/hl-gen)
+
 ---
 
 ## The loop
