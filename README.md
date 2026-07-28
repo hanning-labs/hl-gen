@@ -1,5 +1,7 @@
 # hl-gen — multi-pipeline text synthesis framework
 
+[![Write Up — work/hl-gen](https://img.shields.io/badge/Write%20Up-work%2Fhl--gen-cf8b57?style=flat-square&labelColor=1c2126)](https://hanninglabs.com/work/hl-gen)
+
 A closed-loop, multi-agent framework that **generates, scores, and refines text** using an OpenAI-compatible LLM server (e.g. vLLM). Two pipelines ship out of the box:
 
 | Pipeline | What it produces | Entry point |
@@ -9,7 +11,6 @@ A closed-loop, multi-agent framework that **generates, scores, and refines text*
 
 Both share the same closed loop, agent role hierarchy, storage layer, and tool infrastructure. Adding a third pipeline means writing prompts and subclassing four base classes.
 
-[![Write-up — work/hl-gen](https://img.shields.io/badge/write--up-hanninglabs.com%2Fwork%2Fhl--gen-cf8b57?style=flat-square&labelColor=1c2126)](https://hanninglabs.com/work/hl-gen)
 
 ---
 
